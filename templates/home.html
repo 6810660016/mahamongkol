@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}หน้าแรก | ระบบจองคิว{% endblock %}
+
+{% block content %}
+<h1>ระบบจองคิว</h1>
+
+{% if user.is_authenticated %}
+    <p>สวัสดี {{ user.username }}</p>
+    <p>บทบาท: {{ user.get_role_display }}</p>
+{% else %}
+    <p>ยังไม่ได้เข้าสู่ระบบ</p>
+    {# TODO: เปลี่ยนเป็น {% url 'signup' %} เมื่อทำหน้า signup เสร็จ #}
+    <a href="/accounts/signup/">สมัครสมาชิก</a>
+{% endif %}
+{% endblock %}
