@@ -17,7 +17,9 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-เปิด http://127.0.0.1:8000/
+- หน้าแรก (welcome): http://127.0.0.1:8000/
+- หน้า home: http://127.0.0.1:8000/home/
+- หน้า login: http://127.0.0.1:8000/login/
 
 ## สร้าง superuser (เข้าหน้า admin)
 
