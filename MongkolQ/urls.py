@@ -24,4 +24,9 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('welcome/', views.welcome_view, name='welcome'),
     path('home/', views.home_view, name='home'),
+    path('restaurants/', views.restaurants_view, name='restaurants'),
+    path('restaurants/<slug:slug>/', views.restaurant_detail_view, name='restaurant_detail'),
+    path('book/<slug:slug>/', views.booking_view, name='booking'),
+    path('my-queues/', views.my_queues_view, name='my_queues'),
+    path('cancel-booking/<int:booking_id>/', views.cancel_booking_view, name='cancel_booking'),
 ]

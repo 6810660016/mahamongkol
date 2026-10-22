@@ -1,0 +1,9 @@
+<header class="site-header">
+  <a class="site-brand" href="{% url 'home' %}"><span class="site-brand__mark">M</span><span>mahamongkol</span></a>
+  <nav class="site-nav" aria-label="Main navigation">
+    <a class="{% if active_page == 'home' %}is-active{% endif %}" href="{% url 'home' %}">Home</a>
+    <a class="{% if active_page == 'restaurants' %}is-active{% endif %}" href="{% url 'restaurants' %}">Explore</a>
+    <a class="{% if active_page == 'queues' %}is-active{% endif %}" href="{% url 'my_queues' %}">My Q</a>
+    <a href="{% url 'welcome' %}">Sign out</a>
+  </nav>
+</header>
