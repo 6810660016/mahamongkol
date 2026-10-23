@@ -1,0 +1,32 @@
+{% extends 'account/base.html' %}
+{% load static %}
+{% block title %}Explore | Mahamongkol{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/restaurants.css' %}">{% endblock %}
+{% block body_class %}restaurants-page{% endblock %}
+{% block content %}
+<main class="catalog-shell">
+  {% include 'account/partials/site_nav.html' with active_page='restaurants' %}
+  <section class="catalog-intro">
+    <p class="eyebrow">A PLACE FOR EVERY MOMENT</p>
+    <h1>Find your next<br><span>favourite place.</span></h1>
+    <p>Good food, thoughtful service and places worth coming back to.</p>
+    <form class="catalog-search" method="get" action="{% url 'restaurants' %}">
+      <span aria-hidden="true">⌕</span><input type="search" name="q" value="{{ query }}" placeholder="Restaurant, cuisine or location" aria-label="Search restaurants">
+      <button class="button button--primary" type="submit">Search <span>→</span></button>
+    </form>
+  </section>
+  <section class="catalog-results" aria-labelledby="results-heading">
+    <div class="catalog-heading"><div><p class="eyebrow">CURATED FOR YOU</p><h2 id="results-heading">Restaurants <span>({{ restaurants|length }})</span></h2></div><span class="catalog-location">⌖ Bangkok, Thailand</span></div>
+    {% if restaurants %}
+    <div class="restaurant-grid">
+      {% for place in restaurants %}
+      <article class="restaurant-card">
+        <a class="restaurant-card__image" href="{% url 'restaurant_detail' place.slug %}" style="background-image:url('{{ place.image }}')" aria-label="Explore {{ place.name }}"><span>VIEW PLACE ↗</span></a>
+        <div class="restaurant-card__body"><div><h3><a href="{% url 'restaurant_detail' place.slug %}">{{ place.name }}</a></h3><p>{{ place.price }}</p></div><span class="restaurant-card__rating">★ {{ place.rating }}</span><p class="restaurant-card__address">⌖ {{ place.address }}</p><a class="restaurant-card__link" href="{% url 'restaurant_detail' place.slug %}">Discover <span>→</span></a></div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}<div class="empty-search"><span>⌕</span><h3>No places found</h3><p>Try another name, cuisine or location.</p><a class="button button--primary" href="{% url 'restaurants' %}">Clear search</a></div>{% endif %}
+  </section>
+</main>
+{% endblock %}
