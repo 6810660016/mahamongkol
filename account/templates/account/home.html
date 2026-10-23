@@ -16,6 +16,16 @@
         <a class="home-nav__link" href="#search"><span class="nav-icon">⌕</span><span>Search</span></a>
         <a class="home-nav__link" href="#profile"><span class="nav-icon">♙</span><span>Profile</span></a>
       </div>
+      {# ข้อมูลผู้ใช้ (ฝั่ง frontend จัดหน้าตาได้เลย) #}
+      <div class="home-nav__user">
+        {% if user.is_authenticated %}
+          <span>{{ user.username }}</span>
+          <span>({{ user.get_role_display }})</span>
+        {% else %}
+          {# TODO: เปลี่ยนเป็น {% url 'signup' %} เมื่อทำหน้า signup เสร็จ #}
+          <a class="home-nav__link" href="/signup/">สมัครสมาชิก</a>
+        {% endif %}
+      </div>
     </nav>
     <div class="home-hero__content">
       <p class="eyebrow eyebrow--light">YOUR NEXT FAVOURITE PLACE</p>
