@@ -32,3 +32,13 @@ button { cursor: pointer; }
 /* Shared brand component */
 .brand-mark, .home-brand { display: inline-flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 700; letter-spacing: .03em; }
 .brand-mark__icon, .home-brand__icon { display: grid; place-items: center; width: 32px; height: 32px; color: var(--gold); border: 1px solid var(--gold); border-radius: 50%; font-family: Merriweather, serif; font-size: .82rem; }
+
+/* Shared navigation used by the booking and discovery pages */
+.site-header { display: flex; align-items: center; justify-content: space-between; width: min(1240px, calc(100% - 96px)); margin: 0 auto; padding: 27px 0; border-bottom: 1px solid rgba(0, 62, 46, .12); }
+.site-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--green); font-size: 1.02rem; font-weight: 700; letter-spacing: .03em; }
+.site-brand__mark { display: grid; place-items: center; width: 33px; height: 33px; border: 1px solid var(--gold); border-radius: 50%; color: var(--gold); font-family: Merriweather, serif; font-size: .82rem; }
+.site-nav { display: flex; align-items: center; gap: 7px; }
+.site-nav a { padding: 11px 18px; border-radius: 999px; color: #77766e; font-size: .82rem; transition: color .2s, background .2s; }
+.site-nav a:hover, .site-nav a.is-active { color: var(--green); background: rgba(0, 62, 46, .08); }
+@media (max-width: 1000px) { .site-header { width: min(100% - 48px, 720px); } }
+@media (max-width: 560px) { .site-header { width: calc(100% - 36px); padding: 20px 0; } .site-nav { gap: 0; } .site-nav a { padding: 9px 10px; font-size: .72rem; } .site-brand { font-size: .86rem; } }
