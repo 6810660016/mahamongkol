@@ -22,8 +22,7 @@
           <span>{{ user.username }}</span>
           <span>({{ user.get_role_display }})</span>
         {% else %}
-          {# TODO: เปลี่ยนเป็น {% url 'signup' %} เมื่อทำหน้า signup เสร็จ #}
-          <a class="home-nav__link" href="/signup/">สมัครสมาชิก</a>
+          <a class="home-nav__link" href="{% url 'signup' %}">สมัครสมาชิก</a>
         {% endif %}
       </div>
     </nav>
