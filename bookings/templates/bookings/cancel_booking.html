@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Cancel reservation | Mahamongkol{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'bookings/css/cancel_booking.css' %}">{% endblock %}
+{% block body_class %}cancel-page{% endblock %}
+{% block content %}
+<main class="cancel-shell">
+    <div class="cancel-backdrop"></div>
+    <section class="cancel-dialog" role="dialog" aria-modal="true" aria-labelledby="cancel-title"><a
+            class="cancel-close" href="{% url 'my_queues' %}" aria-label="Close">×</a>
+        <div class="cancel-icon">!</div>
+        <p class="eyebrow">CHANGE OF PLANS?</p>
+        <h1 id="cancel-title">Cancel this<br>reservation?</h1>
+        <p class="cancel-copy">Your reservation at <strong>{{ booking.restaurant }}</strong> on <strong>{{ booking.date
+                }}</strong> at <strong>{{ booking.time }}</strong> will be removed from your upcoming plans.</p>
+        <form method="post">{% csrf_token %}<button class="button cancel-confirm" type="submit">Yes, cancel
+                booking</button><a class="cancel-keep" href="{% url 'my_queues' %}">Keep my reservation</a></form>
+    </section>
+</main>
+{% endblock %}

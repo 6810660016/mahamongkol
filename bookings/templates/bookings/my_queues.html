@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}My Q | Mahamongkol{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'bookings/css/my_queues.css' %}">{% endblock %}
+{% block body_class %}queues-page{% endblock %}
+{% block content %}
+<main class="queues-shell">
+  {% include 'partials/site_nav.html' with active_page='queues' %}
+  <section class="queues-heading">
+    <p class="eyebrow">YOUR PLANS, ALL IN ONE PLACE</p>
+    <h1>My <span>Q.</span></h1>
+    <p>Keep track of the moments you’ve got coming up.</p>
+  </section>
+  <section class="queues-content">
+    <div class="queues-tabs"><span class="is-active">Upcoming <b>{{ bookings|length }}</b></span><a
+        href="{% url 'restaurants' %}">Find a place <span>→</span></a></div>
+    {% if bookings %}<div class="queue-list">{% for booking in bookings %}<article class="queue-card">
+        <div class="queue-card__image" style="background-image:url('{{ booking.image }}')"></div>
+        <div class="queue-card__main">
+          <div class="queue-card__top">
+            <div>
+              <p class="eyebrow">TABLE RESERVATION</p>
+              <h2>{{ booking.restaurant }}</h2>
+            </div><span class="queue-status"><i></i>{{ booking.status }}</span>
+          </div>
+          <div class="queue-card__details"><span>▦ {{ booking.date }}</span><span>◷ {{ booking.time }}</span><span>♙ {{
+              booking.guests }} guest{{ booking.guests|pluralize }}</span></div>
+          <div class="queue-card__actions"><a href="{% url 'restaurant_detail' booking.slug %}">View place</a><a
+              class="queue-card__cancel" href="{% url 'cancel_booking' booking.id %}">Cancel booking</a></div>
+        </div>
+      </article>{% endfor %}</div>
+    {% else %}<div class="queue-empty"><span class="queue-empty__icon">▣</span>
+      <p class="eyebrow">NOTHING ON THE CALENDAR</p>
+      <h2>Your next favourite moment<br>is waiting to be booked.</h2>
+      <p>Explore our handpicked places and make a reservation in just a few clicks.</p><a class="button button--primary"
+        href="{% url 'restaurants' %}">Explore places <span>→</span></a>
+    </div>{% endif %}
+  </section>
+</main>
+{% endblock %}

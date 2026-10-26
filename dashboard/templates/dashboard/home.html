@@ -1,8 +1,10 @@
-{% extends 'account/base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 {% block title %}Home | Mahamongkol{% endblock %}
-{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/home.css' %}">{% endblock %}
-{% block page_js %}<script src="{% static 'account/js/home.js' %}"></script>{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}">{% endblock %}
+{% block page_js %}
+<script src="{% static 'js/home.js' %}"></script>{% endblock %}
 {% block body_class %}home-page{% endblock %}
 {% block content %}
 <main>
@@ -14,15 +16,16 @@
         <a class="home-nav__link is-active" href="{% url 'home' %}"><span class="nav-icon">⌂</span><span>Home</span></a>
         <a class="home-nav__link" href="{% url 'my_queues' %}"><span class="nav-icon">▣</span><span>My Q</span></a>
         <a class="home-nav__link" href="{% url 'restaurants' %}"><span class="nav-icon">⌕</span><span>Explore</span></a>
-        <a class="home-nav__link" href="{% url 'my_queues' %}"><span class="nav-icon">♙</span><span>My bookings</span></a>
+        <a class="home-nav__link" href="{% url 'my_queues' %}"><span class="nav-icon">♙</span><span>My
+            bookings</span></a>
       </div>
       {# ข้อมูลผู้ใช้ (ฝั่ง frontend จัดหน้าตาได้เลย) #}
       <div class="home-nav__user">
         {% if user.is_authenticated %}
-          <span>{{ user.username }}</span>
-          <span>({{ user.get_role_display }})</span>
+        <span>{{ user.username }}</span>
+        <span>({{ user.get_role_display }})</span>
         {% else %}
-          <a class="home-nav__link" href="{% url 'signup' %}">สมัครสมาชิก</a>
+        <a class="home-nav__link" href="{% url 'signup' %}">สมัครสมาชิก</a>
         {% endif %}
       </div>
     </nav>
@@ -32,7 +35,8 @@
       <p class="home-hero__subtitle">Discover great food and quality services<br>for your next memorable experience.</p>
       <form class="search-box" id="search" data-search-form action="{% url 'restaurants' %}" method="get">
         <span class="search-box__icon">⌕</span>
-        <input type="search" name="q" placeholder="Search restaurants or other services" aria-label="Search restaurants or other services">
+        <input type="search" name="q" placeholder="Search restaurants or other services"
+          aria-label="Search restaurants or other services">
         <button type="submit">Search</button>
       </form>
     </div>
@@ -54,22 +58,33 @@
       </div>
 
       <div class="section-heading">
-        <div><p class="eyebrow">HANDPICKED FOR YOU</p><h2>Favourites</h2></div>
+        <div>
+          <p class="eyebrow">HANDPICKED FOR YOU</p>
+          <h2>Favourites</h2>
+        </div>
         <a href="{% url 'restaurants' %}">View all <span>→</span></a>
       </div>
       <div class="favourites-grid">
         {% for place in favourites %}
         <article class="place-card">
           <a href="{% url 'restaurant_detail' place.slug %}" aria-label="View {{ place.name }}">
-          <div class="place-card__image" style="background-image: url('{{ place.image }}')"><span class="place-card__heart" aria-hidden="true">♡</span></div>
-          <div class="place-card__body"><h3>{{ place.name }}</h3><p>{{ place.type }}</p><span class="place-card__rating">★ 4.8</span></div>
+            <div class="place-card__image" style="background-image: url('{{ place.image }}')"><span
+                class="place-card__heart" aria-hidden="true">♡</span></div>
+            <div class="place-card__body">
+              <h3>{{ place.name }}</h3>
+              <p>{{ place.type }}</p><span class="place-card__rating">★ 4.8</span>
+            </div>
           </a>
         </article>
         {% endfor %}
       </div>
 
       <div class="feature-banner">
-        <div><p class="eyebrow">MAHAMONGKOL EXPERIENCE</p><h2>Every booking<br><span>means more.</span></h2><p>Thoughtful service from the first search to the moment you arrive.</p></div>
+        <div>
+          <p class="eyebrow">MAHAMONGKOL EXPERIENCE</p>
+          <h2>Every booking<br><span>means more.</span></h2>
+          <p>Thoughtful service from the first search to the moment you arrive.</p>
+        </div>
         <a class="button button--light" href="#explore">Discover more <span>→</span></a>
       </div>
     </div>

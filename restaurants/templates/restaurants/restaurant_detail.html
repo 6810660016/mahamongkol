@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ restaurant.name }} | Mahamongkol{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'restaurants/css/restaurant_detail.css' %}">{% endblock %}
+{% block body_class %}restaurant-detail-page{% endblock %}
+{% block content %}
+<main class="detail-shell">
+  {% include 'partials/site_nav.html' with active_page='restaurants' %}
+  <div class="detail-breadcrumb"><a href="{% url 'restaurants' %}">Restaurants</a><span>/</span><span>{{ restaurant.name
+      }}</span></div>
+  <section class="detail-layout">
+    <div class="detail-main">
+      <div class="detail-gallery">
+        <div class="detail-gallery__main" style="background-image:url('{{ restaurant.image }}')"></div>
+        <div class="detail-gallery__side">
+          <div
+            style="background-image:url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=85')">
+          </div>
+          <div
+            style="background-image:url('https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=900&q=85')">
+          </div>
+        </div><span class="detail-gallery__label">{{ restaurant.name }}</span>
+      </div>
+      <div class="detail-title">
+        <div>
+          <p class="eyebrow">{{ restaurant.type|upper }}</p>
+          <h1>{{ restaurant.name }}</h1>
+          <p class="detail-title__address">⌖ {{ restaurant.address }}</p>
+        </div>
+        <div class="detail-rating"><strong>★ {{ restaurant.rating }}</strong><span>{{ restaurant.reviews }}
+            reviews</span></div>
+      </div>
+      <div class="detail-rule"></div>
+      <section class="detail-about">
+        <h2>About this place</h2>
+        <p>{{ restaurant.description }}</p>
+      </section>
+      <div class="detail-facts">
+        <div><span>◷</span>
+          <p><strong>Opening hours</strong><small>{{ restaurant.hours }}</small></p>
+        </div>
+        <div><span>♧</span>
+          <p><strong>Good to know</strong><small>{{ restaurant.price }} · Reservations recommended</small></p>
+        </div>
+      </div>
+    </div>
+    <aside class="booking-card">
+      <p class="eyebrow">YOUR TABLE AWAITS</p>
+      <h2>Make a reservation</h2>
+      <p class="booking-card__copy">Choose a time that works for you. We’ll take care of the rest.</p>
+      <div class="booking-card__rating"><span>★ {{ restaurant.rating }}</span><span>{{ restaurant.reviews }} guest
+          reviews</span></div><a class="button button--primary button--full"
+        href="{% url 'booking' restaurant.slug %}">Book a table <span>→</span></a>
+      <p class="booking-card__note">Free cancellation · Instant confirmation</p>
+    </aside>
+  </section>
+</main>
+{% endblock %}

@@ -1,56 +1,60 @@
-{% extends 'account/base.html' %}
+{% extends 'base.html' %}
 {% block title %}สมัครสมาชิก | Mahamongkol{% endblock %}
 {% block content %}
 <main>
   <h1>สมัครสมาชิก</h1>
 
   {% comment %}
-    หมายเหตุสำหรับฝั่ง frontend:
-    - ห้ามลบ {% csrf_token %} (ถ้าลบ ฟอร์มจะส่งไม่ได้ ขึ้น 403)
-    - ห้ามเปลี่ยน name ของ input (username, email, password1, password2)
-      เพราะ backend อ่านค่าจาก name เหล่านี้
-    - ตกแต่ง class / layout / label ได้ตามสบาย
+  หมายเหตุสำหรับฝั่ง frontend:
+  - ห้ามลบ {% csrf_token %} (ถ้าลบ ฟอร์มจะส่งไม่ได้ ขึ้น 403)
+  - ห้ามเปลี่ยน name ของ input (username, email, password1, password2)
+  เพราะ backend อ่านค่าจาก name เหล่านี้
+  - ตกแต่ง class / layout / label ได้ตามสบาย
   {% endcomment %}
   <form method="post" action="{% url 'signup' %}" novalidate>
     {% csrf_token %}
 
     {% if form.non_field_errors %}
-      <div class="form-errors">
-        {% for error in form.non_field_errors %}
-          <p>{{ error }}</p>
-        {% endfor %}
-      </div>
+    <div class="form-errors">
+      {% for error in form.non_field_errors %}
+      <p>{{ error }}</p>
+      {% endfor %}
+    </div>
     {% endif %}
 
     <div>
       <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
-      <input type="text" id="{{ form.username.id_for_label }}" name="username" value="{{ form.username.value|default:'' }}" autocomplete="username" required>
+      <input type="text" id="{{ form.username.id_for_label }}" name="username"
+        value="{{ form.username.value|default:'' }}" autocomplete="username" required>
       {% for error in form.username.errors %}
-        <small class="field-error">{{ error }}</small>
+      <small class="field-error">{{ error }}</small>
       {% endfor %}
     </div>
 
     <div>
       <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
-      <input type="email" id="{{ form.email.id_for_label }}" name="email" value="{{ form.email.value|default:'' }}" autocomplete="email" required>
+      <input type="email" id="{{ form.email.id_for_label }}" name="email" value="{{ form.email.value|default:'' }}"
+        autocomplete="email" required>
       {% for error in form.email.errors %}
-        <small class="field-error">{{ error }}</small>
+      <small class="field-error">{{ error }}</small>
       {% endfor %}
     </div>
 
     <div>
       <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
-      <input type="password" id="{{ form.password1.id_for_label }}" name="password1" autocomplete="new-password" required>
+      <input type="password" id="{{ form.password1.id_for_label }}" name="password1" autocomplete="new-password"
+        required>
       {% for error in form.password1.errors %}
-        <small class="field-error">{{ error }}</small>
+      <small class="field-error">{{ error }}</small>
       {% endfor %}
     </div>
 
     <div>
       <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
-      <input type="password" id="{{ form.password2.id_for_label }}" name="password2" autocomplete="new-password" required>
+      <input type="password" id="{{ form.password2.id_for_label }}" name="password2" autocomplete="new-password"
+        required>
       {% for error in form.password2.errors %}
-        <small class="field-error">{{ error }}</small>
+      <small class="field-error">{{ error }}</small>
       {% endfor %}
     </div>
 
