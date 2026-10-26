@@ -6,6 +6,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', view_account.welcome_view, name='welcome'),
     path('login/', view_account.login_view, name='login'),
+    path('signup/', view_account.signup_view, name='signup'),
     path('welcome/', view_account.welcome_view, name='welcome'),
     path('home/', view_account.home_view, name='home'),
     path('restaurants/', view_account.restaurants_view, name='restaurants'),
