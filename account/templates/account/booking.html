@@ -5,7 +5,7 @@
 {% block body_class %}booking-page{% endblock %}
 {% block content %}
 <main class="booking-shell">
-  {% include 'account/partials/site_nav.html' with active_page='restaurants' %}
+  <section class="inner-hero inner-hero--compact">{% include 'account/partials/site_nav.html' with active_page='restaurants' %}</section>
   <a class="booking-back" href="{% url 'restaurant_detail' restaurant.slug %}">← <span>Back to {{ restaurant.name }}</span></a>
   <section class="booking-layout">
     <div class="booking-form-panel"><p class="eyebrow">RESERVATION</p><h1>Book your<br><span>table.</span></h1><p class="booking-lead">A lovely experience at {{ restaurant.name }} is just a few details away.</p>

@@ -42,3 +42,34 @@ class BookingFlowTests(TestCase):
         })
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Please choose a valid date')
+
+    def test_settings_can_be_saved_in_session(self):
+        response = self.client.get(reverse('settings'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Personal details')
+        self.assertContains(response, 'aria-label="My Q"')
+
+        response = self.client.post(reverse('settings'), {
+            'name': 'Taylor Guest',
+            'email': 'taylor@example.com',
+            'language': 'Thai',
+            'currency': 'USD',
+            'time_format': '24-hour',
+            'reservation_updates': 'on',
+        })
+        self.assertContains(response, 'Your settings have been saved')
+        self.assertEqual(self.client.session['site_settings']['name'], 'Taylor Guest')
+        self.assertEqual(self.client.session['site_settings']['currency'], 'USD')
+        self.assertFalse(self.client.session['site_settings']['reminders'])
+
+    def test_search_bar_filters_restaurants_from_shared_navigation(self):
+        response = self.client.get(reverse('restaurants'), {'q': 'mellow'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'value="mellow"')
+        self.assertContains(response, 'Mellow Coffee')
+
+    def test_home_navigation_shows_my_q_link(self):
+        response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'aria-label="My Q"')
+        self.assertContains(response, reverse('my_queues'))
