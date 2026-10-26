@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Welcome | Mahamongkol{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/welcome.css' %}">{% endblock %}
+{% block body_class %}welcome-page{% endblock %}
+{% block content %}
+<main class="welcome-screen">
+  <div class="welcome-screen__glow"></div>
+  <header class="welcome-topbar">
+    <a class="welcome-brand" href="{% url 'welcome' %}"><span
+        class="welcome-brand__icon">M</span><span>mahamongkol</span></a>
+    <span class="welcome-topbar__tag">BOOK · RELAX · ENJOY</span>
+  </header>
+  <div class="welcome-layout">
+    <section class="welcome-copy">
+      <p class="eyebrow eyebrow--light">YOUR MOMENT STARTS HERE</p>
+      <h1>Make time for<br><span>what matters.</span></h1>
+      <p class="welcome-copy__text">Discover restaurants, cafés, wellness experiences and more — all curated to make
+        every moment feel a little more special.</p>
+      <div class="welcome-actions">
+        <a class="button button--primary welcome-primary-action" href="{% url 'login' %}">Get started <span
+            aria-hidden="true">→</span></a>
+        <a class="welcome-secondary-action" href="#experience">Explore the experience <span
+            aria-hidden="true">↓</span></a>
+      </div>
+    </section>
+    <section class="welcome-art" id="experience" aria-label="A curated restaurant experience">
+      <div class="welcome-art__image"></div>
+      <div class="welcome-art__shade"></div>
+      <div class="welcome-art__note"><span class="welcome-art__note-mark">✦</span>
+        <div><strong>Curated for you</strong><small>Moments worth remembering</small></div>
+      </div>
+      <div class="welcome-art__number">01 <span>/ 03</span></div>
+    </section>
+  </div>
+</main>
+{% endblock %}

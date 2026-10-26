@@ -1,4 +1,4 @@
-{% extends 'account/base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 {% block title %}Settings | Mahamongkol{% endblock %}
 {% block page_css %}<link rel="stylesheet" href="{% static 'account/css/settings.css' %}?v=20261026">{% endblock %}
@@ -6,7 +6,7 @@
 {% block content %}
 <main class="settings-shell">
   <section class="inner-hero settings-hero">
-    {% include 'account/partials/site_nav.html' with active_page='settings' %}
+    {% include 'partials/site_nav.html' with active_page='settings' %}
     <div class="inner-hero__content">
       <p class="eyebrow eyebrow--light">MAKE IT YOURS</p>
       <h1>Settings<span>.</span></h1>
