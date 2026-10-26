@@ -31,3 +31,11 @@
 .empty-search .button { margin-top: 12px; }
 @media (max-width: 1000px) { .catalog-intro { padding: 60px 24px 48px; } .catalog-results { width: min(100% - 48px, 720px); } .restaurant-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 620px) { .catalog-intro { padding: 48px 20px 38px; } .catalog-search { gap: 6px; } .catalog-search input { font-size: .76rem; } .catalog-search .button { padding: 0 12px; font-size: .75rem; } .catalog-results { width: calc(100% - 36px); padding: 42px 0 70px; } .catalog-heading { align-items: start; } .catalog-heading h2 { font-size: 1.55rem; } .catalog-location { font-size: .68rem; } .restaurant-grid { grid-template-columns: 1fr; } .restaurant-card__image { height: 220px; } }
+
+/* Keep Explore visually in step with the Home hero and favourite cards. */
+.catalog-hero { min-height: 435px; }
+.catalog-search { gap: 12px; width: min(650px, 100%); margin-top: 25px; padding: 6px 7px 6px 19px; border-radius: 999px; background: rgba(255,253,248,.97); }
+.catalog-search .button { min-height: 46px; padding: 0 23px; border-radius: 999px; }
+.restaurant-card { border: 0; border-radius: 13px; box-shadow: 0 12px 26px rgba(49,41,25,.07); transition: transform .2s ease, box-shadow .2s ease; }
+.restaurant-card:hover { transform: translateY(-4px); box-shadow: 0 18px 34px rgba(49,41,25,.13); }
+@media (max-width: 620px) { .catalog-hero { min-height: 410px; }.catalog-search .button { padding: 0 15px; } }

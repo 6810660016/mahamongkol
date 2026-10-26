@@ -7,7 +7,6 @@ from restaurants.data import get_restaurant
 
 SLOTS = ("11:30", "13:00", "17:30", "19:00", "20:30")
 
-
 def booking_view(request, slug):
     restaurant = get_restaurant(slug)
     if restaurant is None:
@@ -53,11 +52,9 @@ def booking_view(request, slug):
         },
     )
 
-
 def my_queues_view(request):
     bookings = request.session.get("bookings", [])
     return render(request, "bookings/my_queues.html", {"bookings": bookings})
-
 
 def cancel_booking_view(request, booking_id):
     bookings = request.session.get("bookings", [])

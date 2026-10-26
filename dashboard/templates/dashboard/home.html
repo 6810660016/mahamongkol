@@ -1,34 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Home | Mahamongkol{% endblock %}
-{% block page_css %}
-<link rel="stylesheet" href="{% static 'css/home.css' %}">{% endblock %}
-{% block page_js %}
-<script src="{% static 'js/home.js' %}"></script>{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'dashboard/css/home.css' %}?v=20261026-3">{% endblock %}
+{% block page_js %}<script src="{% static 'dashboard/js/home.js' %}"></script>{% endblock %}
 {% block body_class %}home-page{% endblock %}
 {% block content %}
 <main>
   <section class="home-hero">
     <div class="home-hero__overlay"></div>
-    <nav class="home-nav" aria-label="Main navigation">
-      <a class="home-brand" href="{% url 'home' %}"><span class="home-brand__icon">M</span><span>mahamongkol</span></a>
-      <div class="home-nav__links">
-        <a class="home-nav__link is-active" href="{% url 'home' %}"><span class="nav-icon">⌂</span><span>Home</span></a>
-        <a class="home-nav__link" href="{% url 'my_queues' %}"><span class="nav-icon">▣</span><span>My Q</span></a>
-        <a class="home-nav__link" href="{% url 'restaurants' %}"><span class="nav-icon">⌕</span><span>Explore</span></a>
-        <a class="home-nav__link" href="{% url 'my_queues' %}"><span class="nav-icon">♙</span><span>My
-            bookings</span></a>
-      </div>
-      {# ข้อมูลผู้ใช้ (ฝั่ง frontend จัดหน้าตาได้เลย) #}
-      <div class="home-nav__user">
-        {% if user.is_authenticated %}
-        <span>{{ user.username }}</span>
-        <span>({{ user.get_role_display }})</span>
-        {% else %}
-        <a class="home-nav__link" href="{% url 'signup' %}">สมัครสมาชิก</a>
-        {% endif %}
-      </div>
-    </nav>
+{% include 'partials/site_nav.html' with active_page='home' %}
     <div class="home-hero__content">
       <p class="eyebrow eyebrow--light">YOUR NEXT FAVOURITE PLACE</p>
       <h1><span>Book</span> restaurants and other<br>services all in <span>one place.</span></h1>

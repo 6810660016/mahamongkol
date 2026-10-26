@@ -36,3 +36,6 @@ def home_view(request):
             "favourites": favourites,
         },
     )
+
+def welcome_view(request):
+    return render(request, 'dashboard/welcome.html')

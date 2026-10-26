@@ -2,15 +2,17 @@
 {% load static %}
 {% block title %}My Q | Mahamongkol{% endblock %}
 {% block page_css %}
-<link rel="stylesheet" href="{% static 'bookings/css/my_queues.css' %}">{% endblock %}
+<link rel="stylesheet" href="{% static 'bookings/css/my_queues.css' %}?v=20261026">{% endblock %}
 {% block body_class %}queues-page{% endblock %}
 {% block content %}
 <main class="queues-shell">
-  {% include 'partials/site_nav.html' with active_page='queues' %}
-  <section class="queues-heading">
-    <p class="eyebrow">YOUR PLANS, ALL IN ONE PLACE</p>
-    <h1>My <span>Q.</span></h1>
-    <p>Keep track of the moments you’ve got coming up.</p>
+  <section class="inner-hero queues-hero">
+    {% include 'partials/site_nav.html' with active_page='queues' %}
+    <div class="inner-hero__content">
+      <p class="eyebrow eyebrow--light">YOUR PLANS, ALL IN ONE PLACE</p>
+      <h1>My <span>Q.</span></h1>
+      <p>Keep track of the moments you’ve got coming up.</p>
+    </div>
   </section>
   <section class="queues-content">
     <div class="queues-tabs"><span class="is-active">Upcoming <b>{{ bookings|length }}</b></span><a

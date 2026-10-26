@@ -1,13 +1,8 @@
 /* Home page only */
 .home-hero { position: relative; display: flex; flex-direction: column; min-height: 720px; color: var(--white); overflow: hidden; background: url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2200&q=90') center/cover; }
 .home-hero__overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.52) 0%, rgba(0,0,0,.4) 44%, rgba(0,0,0,.7) 100%); }
-.home-nav { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; width: min(1240px, calc(100% - 96px)); margin: 32px auto 0; }
-.home-brand { color: var(--white); }
-.home-brand__icon { color: var(--gold-light); border-color: var(--gold-light); }
-.home-nav__links { display: flex; gap: 5px; padding: 7px; border: 1px solid rgba(255,255,255,.42); border-radius: 999px; background: rgba(38, 42, 36, .55); backdrop-filter: blur(18px); }
-.home-nav__link { display: flex; align-items: center; gap: 8px; padding: 11px 20px; border-radius: 999px; color: rgba(255,255,255,.7); font-size: .78rem; transition: background .2s, color .2s; }
-.home-nav__link:hover, .home-nav__link.is-active { color: var(--white); background: rgba(255,255,255,.17); }
-.nav-icon { font-size: 1.35rem; line-height: .8; }
+.home-nav__link .nav-link-label { display: inline !important; white-space: nowrap; }
+.home-hero__scroll { display: none !important; }
 .home-hero__content { position: relative; z-index: 1; width: min(1240px, calc(100% - 96px)); margin: auto; padding: 80px 0 100px; }
 .home-hero h1 { margin: 0; font-family: Merriweather, serif; font-size: clamp(2.7rem, 5.6vw, 6.25rem); line-height: 1.18; letter-spacing: -.05em; }
 .home-hero h1 span { color: var(--gold-light); }
@@ -46,17 +41,11 @@
 
 @media (max-width: 1000px) {
   .home-hero { min-height: 680px; }
-  .home-nav, .home-hero__content, .section-wrap { width: min(100% - 48px, 720px); }
-  .home-nav__link span:not(.nav-icon) { display: none; }
-  .home-nav__link { padding: 12px 15px; }
+  .home-hero__content, .section-wrap { width: min(100% - 48px, 720px); }
   .home-hero h1 { font-size: clamp(2.3rem, 8vw, 4.4rem); }
 }
 
 @media (max-width: 680px) {
-  .home-nav { margin-top: 20px; }
-  .home-brand { font-size: .9rem; }
-  .home-nav__links { gap: 0; }
-  .home-nav__link { padding: 10px 11px; }
   .home-hero__content { padding-top: 100px; }
   .home-hero__scroll { display: none; }
   .search-box { align-items: stretch; padding: 6px; }

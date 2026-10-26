@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Settings | Mahamongkol{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/settings.css' %}?v=20261026">{% endblock %}
+{% block body_class %}settings-page{% endblock %}
+{% block content %}
+<main class="settings-shell">
+  <section class="inner-hero settings-hero">
+    {% include 'partials/site_nav.html' with active_page='settings' %}
+    <div class="inner-hero__content">
+      <p class="eyebrow eyebrow--light">MAKE IT YOURS</p>
+      <h1>Settings<span>.</span></h1>
+      <p>Fine-tune your Mahamongkol experience, just the way you like it.</p>
+    </div>
+  </section>
+  <div class="settings-layout">
+    <aside class="settings-menu" aria-label="Settings sections">
+      <a class="is-active" href="#profile"><span>♙</span> Personal details</a>
+      <a href="#preferences"><span>◉</span> Preferences</a>
+      <a href="#notifications"><span>♧</span> Notifications</a>
+      <div class="settings-menu__note"><span>✦</span><p><strong>Your comfort, your way.</strong><small>Changes are saved for this browser session.</small></p></div>
+    </aside>
+    <form class="settings-form" method="post">
+      {% csrf_token %}
+      {% if saved %}<div class="settings-saved" role="status"><span>✓</span> Your settings have been saved.</div>{% endif %}
+      <section class="settings-card" id="profile">
+        <div class="settings-card__heading"><div><p class="eyebrow">YOUR ACCOUNT</p><h2>Personal details</h2></div><span class="settings-card__icon">♙</span></div>
+        <div class="profile-summary"><span class="profile-avatar">{{ settings.name|slice:":1"|upper }}</span><div><strong>{{ settings.name }}</strong><small>Member profile</small></div><span class="profile-summary__tag">ACTIVE</span></div>
+        <div class="settings-fields">
+          <label for="settings-name">Display name</label><input id="settings-name" type="text" name="name" maxlength="80" value="{{ settings.name }}" placeholder="Your name">
+          <label for="settings-email">Email address</label><input id="settings-email" type="email" name="email" maxlength="254" value="{{ settings.email }}" placeholder="you@example.com">
+          <small class="settings-hint">These details are stored in this browser session for the current demo.</small>
+        </div>
+      </section>
+      <section class="settings-card" id="preferences">
+        <div class="settings-card__heading"><div><p class="eyebrow">THE LITTLE DETAILS</p><h2>Preferences</h2></div><span class="settings-card__icon">◉</span></div>
+        <div class="preference-row"><div><strong>Language</strong><small>Choose the language used across the app.</small></div><select name="language" aria-label="Language"><option value="English" {% if settings.language == 'English' %}selected{% endif %}>English</option><option value="Thai" {% if settings.language == 'Thai' %}selected{% endif %}>ไทย (Thai)</option></select></div>
+        <div class="preference-row"><div><strong>Currency</strong><small>Used when showing prices and offers.</small></div><select name="currency" aria-label="Currency"><option value="THB" {% if settings.currency == 'THB' %}selected{% endif %}>THB · Thai Baht</option><option value="USD" {% if settings.currency == 'USD' %}selected{% endif %}>USD · US Dollar</option></select></div>
+        <div class="preference-row"><div><strong>Time format</strong><small>How reservation times are displayed.</small></div><select name="time_format" aria-label="Time format"><option value="12-hour" {% if settings.time_format == '12-hour' %}selected{% endif %}>12-hour</option><option value="24-hour" {% if settings.time_format == '24-hour' %}selected{% endif %}>24-hour</option></select></div>
+      </section>
+      <section class="settings-card" id="notifications">
+        <div class="settings-card__heading"><div><p class="eyebrow">STAY IN THE LOOP</p><h2>Notifications</h2></div><span class="settings-card__icon">♧</span></div>
+        <label class="toggle-row"><span><strong>Reservation updates</strong><small>Changes and confirmations for your bookings.</small></span><input type="checkbox" name="reservation_updates" {% if settings.reservation_updates %}checked{% endif %}><i aria-hidden="true"></i></label>
+        <label class="toggle-row"><span><strong>Upcoming reminders</strong><small>A gentle reminder before your reservation.</small></span><input type="checkbox" name="reminders" {% if settings.reminders %}checked{% endif %}><i aria-hidden="true"></i></label>
+        <label class="toggle-row"><span><strong>News and experiences</strong><small>Occasional notes about new places and offers.</small></span><input type="checkbox" name="offers" {% if settings.offers %}checked{% endif %}><i aria-hidden="true"></i></label>
+      </section>
+      <div class="settings-actions"><span>Your choices are saved locally for this demo.</span><button class="button button--primary" type="submit">Save changes <span>→</span></button></div>
+    </form>
+  </div>
+</main>
+{% endblock %}
