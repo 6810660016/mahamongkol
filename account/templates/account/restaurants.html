@@ -1,19 +1,21 @@
 {% extends 'account/base.html' %}
 {% load static %}
 {% block title %}Explore | Mahamongkol{% endblock %}
-{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/restaurants.css' %}">{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/restaurants.css' %}?v=20261026">{% endblock %}
 {% block body_class %}restaurants-page{% endblock %}
 {% block content %}
 <main class="catalog-shell">
-  {% include 'account/partials/site_nav.html' with active_page='restaurants' %}
-  <section class="catalog-intro">
-    <p class="eyebrow">A PLACE FOR EVERY MOMENT</p>
-    <h1>Find your next<br><span>favourite place.</span></h1>
-    <p>Good food, thoughtful service and places worth coming back to.</p>
+  <section class="inner-hero catalog-hero">
+    {% include 'account/partials/site_nav.html' with active_page='restaurants' %}
+    <div class="inner-hero__content">
+      <p class="eyebrow eyebrow--light">A PLACE FOR EVERY MOMENT</p>
+      <h1>Find your next<br><span>favourite place.</span></h1>
+      <p>Good food, thoughtful service and places worth coming back to.</p>
     <form class="catalog-search" method="get" action="{% url 'restaurants' %}">
       <span aria-hidden="true">⌕</span><input type="search" name="q" value="{{ query }}" placeholder="Restaurant, cuisine or location" aria-label="Search restaurants">
       <button class="button button--primary" type="submit">Search <span>→</span></button>
     </form>
+    </div>
   </section>
   <section class="catalog-results" aria-labelledby="results-heading">
     <div class="catalog-heading"><div><p class="eyebrow">CURATED FOR YOU</p><h2 id="results-heading">Restaurants <span>({{ restaurants|length }})</span></h2></div><span class="catalog-location">⌖ Bangkok, Thailand</span></div>
