@@ -1,0 +1,9 @@
+<nav class="home-nav" aria-label="Main navigation">
+  <a class="home-brand" href="{% url 'home' %}"><span class="home-brand__icon">M</span><span>mahamongkol</span></a>
+  <div class="home-nav__links">
+    <a class="home-nav__link {% if active_page == 'home' %}is-active{% endif %}" href="{% url 'home' %}" aria-label="Home" title="Home"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-link-label">Home</span></a>
+    <a class="home-nav__link {% if active_page == 'queues' %}is-active{% endif %}" href="{% url 'my_queues' %}" aria-label="My Q" title="My Q"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-link-label">My Q</span></a>
+    <a class="home-nav__link {% if active_page == 'restaurants' %}is-active{% endif %}" href="{% url 'restaurants' %}" aria-label="Explore" title="Explore"><span class="nav-icon" aria-hidden="true">⌕</span><span class="nav-link-label">Explore</span></a>
+    <a class="home-nav__link {% if active_page == 'settings' %}is-active{% endif %}" href="{% url 'settings' %}" aria-label="Settings" title="Settings"><span class="nav-icon" aria-hidden="true">⚙</span><span class="nav-link-label">Settings</span></a>
+  </div>
+</nav>
