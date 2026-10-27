@@ -26,8 +26,11 @@
               <h2>{{ booking.restaurant }}</h2>
             </div><span class="queue-status"><i></i>{{ booking.status }}</span>
           </div>
-          <div class="queue-card__details"><span>▦ {{ booking.date }}</span><span>◷ {{ booking.time }}</span><span>♙ {{
-              booking.guests }} guest{{ booking.guests|pluralize }}</span></div>
+          <div class="queue-card__details">
+            <span>▦ {{ booking.date }}</span>
+            <span>◷ {{ booking.time }}</span>
+            <span>♙ {{ booking.guests }} guest{{ booking.guests|pluralize }}</span>
+          </div>
           <div class="queue-card__actions"><a href="{% url 'restaurant_detail' booking.slug %}">View place</a><a
               class="queue-card__cancel" href="{% url 'cancel_booking' booking.id %}">Cancel booking</a></div>
         </div>
