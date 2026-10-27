@@ -1,0 +1,92 @@
+/* Register page only */
+.register-page { min-height: 100vh; background: var(--cream); }
+.register-shell { display: grid; grid-template-columns: minmax(38%, .9fr) minmax(560px, 1.1fr); min-height: 100vh; }
+
+.register-visual { position: relative; min-height: 100vh; overflow: hidden; color: var(--white); background: url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=90') center/cover; }
+.register-visual::before { position: absolute; inset: 0; content: ''; background: linear-gradient(180deg, rgba(0,25,18,.48), rgba(0,31,23,.16) 42%, rgba(0,24,18,.78)); }
+.register-visual__frame { position: absolute; z-index: 1; inset: 24px; border: 1px solid rgba(255,255,255,.3); pointer-events: none; }
+.register-brand { position: absolute; z-index: 2; top: 54px; left: 64px; display: inline-flex; align-items: center; gap: 11px; color: var(--white); font-size: 1rem; font-weight: 700; letter-spacing: .04em; }
+.register-brand__icon { display: grid; flex: 0 0 auto; place-items: center; width: 36px; height: 36px; border: 1px solid var(--gold-light); border-radius: 50%; color: var(--gold-light); font-family: Merriweather, serif; font-size: .85rem; }
+.register-visual__caption { position: absolute; z-index: 2; right: 56px; bottom: 76px; left: 64px; }
+.register-visual__caption h2 { margin: 0; font-family: Merriweather, serif; font-size: clamp(2.3rem, 4.2vw, 4.5rem); line-height: 1.18; letter-spacing: -.045em; }
+.register-visual__caption h2 span { color: var(--gold-light); }
+.register-visual__caption > p:last-child { margin: 17px 0 0; color: rgba(255,255,255,.72); font-size: .92rem; }
+.register-visual__seal { position: absolute; z-index: 2; top: 52px; right: 58px; display: grid; place-items: center; width: 72px; height: 72px; border: 1px solid rgba(229,196,110,.55); border-radius: 50%; color: var(--gold-light); text-align: center; transform: rotate(9deg); }
+.register-visual__seal span { margin: 0 0 -9px; font-size: 1.1rem; }
+.register-visual__seal small { font-size: .48rem; font-weight: 700; letter-spacing: .14em; line-height: 1.5; }
+
+.register-panel { display: flex; align-items: center; justify-content: center; padding: 48px clamp(34px, 6vw, 92px); }
+.register-panel__inner { width: min(100%, 570px); }
+.register-mobile-brand { display: none; }
+.register-heading { margin: 0 0 30px; }
+.register-heading .eyebrow { margin-bottom: 11px; }
+.register-heading h1 { margin: 0; color: var(--ink); font-family: Merriweather, serif; font-size: clamp(2.25rem, 3.3vw, 3.35rem); line-height: 1.15; letter-spacing: -.055em; }
+.register-heading h1 span { color: var(--green); }
+.register-heading > p:last-child { max-width: 420px; margin: 13px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.65; }
+
+.register-form { display: grid; gap: 23px; }
+.register-errors { padding: 12px 15px; border: 1px solid rgba(157,62,47,.24); border-radius: 8px; color: #8e3328; background: #fff3ef; font-size: .82rem; }
+.register-errors p { margin: 0; }
+.register-role-picker { min-width: 0; margin: 0; padding: 0; border: 0; }
+.register-role-picker legend { margin-bottom: 10px; color: #37372f; font-size: .76rem; font-weight: 700; }
+.register-role-picker__options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.register-role-option { position: relative; display: block; min-width: 0; cursor: pointer; }
+.register-role-option > input { position: absolute; top: 12px; left: 12px; width: 1px; height: 1px; opacity: 0; }
+.register-role-option__card { display: grid; grid-template-columns: 36px minmax(0, 1fr) 18px; align-items: center; gap: 10px; min-height: 76px; padding: 12px; border: 1px solid #ded8cc; border-radius: 8px; background: rgba(255,253,248,.64); transition: border-color .18s, background .18s, box-shadow .18s, transform .18s; }
+.register-role-option:hover .register-role-option__card { transform: translateY(-1px); border-color: #bdb29e; }
+.register-role-option__icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; color: var(--green); background: #edf1e9; font-size: 1.05rem; }
+.register-role-option__copy { display: block; min-width: 0; }
+.register-role-option__copy strong, .register-role-option__copy small { display: block; }
+.register-role-option__copy strong { color: #34342f; font-size: .75rem; }
+.register-role-option__copy small { margin-top: 4px; color: var(--muted); font-size: .62rem; line-height: 1.4; }
+.register-role-option__check { display: grid; place-items: center; width: 18px; height: 18px; border: 1px solid #c9c2b5; border-radius: 50%; color: transparent; font-size: .65rem; }
+.register-role-option > input:checked + .register-role-option__card { border-color: var(--green); background: #f1f5ef; box-shadow: 0 0 0 2px rgba(0,62,46,.06); }
+.register-role-option > input:checked + .register-role-option__card .register-role-option__icon { color: var(--gold-light); background: var(--green); }
+.register-role-option > input:checked + .register-role-option__card .register-role-option__check { border-color: var(--green); color: var(--white); background: var(--green); }
+.register-role-option > input:focus-visible + .register-role-option__card { outline: 3px solid var(--gold); outline-offset: 3px; }
+.register-form__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px 15px; }
+.register-field { display: grid; align-content: start; gap: 7px; min-width: 0; }
+.register-field--wide { grid-column: 1 / -1; }
+.register-field label { color: #37372f; font-size: .76rem; font-weight: 700; }
+.register-input { width: 100%; height: 51px; padding: 0 14px; border: 1px solid #d6cebf; border-radius: 7px; outline: none; color: var(--ink); background: rgba(255,253,248,.72); font-size: .83rem; transition: border-color .2s, box-shadow .2s, background .2s; }
+.register-input::placeholder { color: #aaa499; }
+.register-input:hover { border-color: #aaa18f; }
+.register-input:focus { border-color: var(--green-soft); background: var(--white); box-shadow: 0 0 0 3px rgba(0,62,46,.1); }
+.register-input[aria-invalid="true"] { border-color: #b44d3f; }
+.register-field__hint { color: var(--muted); font-size: .68rem; line-height: 1.5; }
+.register-field__error { display: grid; gap: 3px; color: #9d3e2f; font-size: .7rem; line-height: 1.45; }
+.register-submit { display: flex; align-items: center; justify-content: space-between; min-height: 54px; padding: 0 20px; border: 1px solid var(--green); border-radius: 7px; color: var(--white); background: var(--green); font-size: .84rem; font-weight: 700; transition: background .2s, transform .2s, box-shadow .2s; }
+.register-submit span { color: var(--gold-light); font-size: 1.2rem; transition: transform .2s; }
+.register-submit:hover { background: var(--green-soft); box-shadow: 0 10px 22px rgba(0,62,46,.16); transform: translateY(-1px); }
+.register-submit:hover span { transform: translateX(3px); }
+.register-submit:focus-visible, .register-footer a:focus-visible, .register-brand:focus-visible, .register-mobile-brand:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+.register-footer { margin: 20px 0 0; color: #77766d; text-align: center; font-size: .78rem; }
+.register-footer a { margin-left: 4px; color: var(--green); font-weight: 700; }
+.register-footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.register-note { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 25px 0 0; color: #aaa499; font-size: .65rem; letter-spacing: .025em; }
+.register-note span { color: var(--gold); }
+
+@media (max-width: 1050px) {
+  .register-shell { grid-template-columns: minmax(0, 1fr); }
+  .register-visual { display: none; }
+  .register-panel { min-height: 100vh; padding: 44px 28px; }
+  .register-panel__inner { width: min(100%, 560px); }
+  .register-mobile-brand { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 48px; color: var(--green); font-size: .95rem; font-weight: 700; letter-spacing: .035em; }
+  .register-mobile-brand .register-brand__icon { color: var(--green); border-color: var(--gold); }
+}
+
+@media (max-width: 560px) {
+  .register-panel { align-items: flex-start; padding: 26px 21px 36px; }
+  .register-mobile-brand { margin-bottom: 38px; }
+  .register-heading { margin-bottom: 25px; }
+  .register-heading h1 { font-size: clamp(2.25rem, 11vw, 3rem); }
+  .register-form__grid { grid-template-columns: minmax(0, 1fr); gap: 15px; }
+  .register-field--wide { grid-column: auto; }
+  .register-form { gap: 20px; }
+  .register-input { height: 52px; }
+  .register-note { margin-top: 21px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .register-input, .register-submit, .register-submit span { transition: none; }
+}

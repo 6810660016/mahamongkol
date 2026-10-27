@@ -1,60 +1,110 @@
-{% extends 'account/base.html' %}
-{% block title %}สมัครสมาชิก | Mahamongkol{% endblock %}
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Create account | Mahamongkol{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/signup.css' %}?v=20261027-2">{% endblock %}
+{% block body_class %}register-page{% endblock %}
 {% block content %}
-<main>
-  <h1>สมัครสมาชิก</h1>
+<main class="register-shell">
+  <section class="register-visual" aria-label="A welcoming restaurant interior">
+    <div class="register-visual__frame"></div>
+    <a class="register-brand" href="{% url 'welcome' %}" aria-label="Mahamongkol welcome page">
+      <span class="register-brand__icon">M</span>
+      <span>mahamongkol</span>
+    </a>
+    <div class="register-visual__caption">
+      <p class="eyebrow eyebrow--light">A PLACE FOR GOOD MOMENTS</p>
+      <h2>Make room for<br><span>something lovely.</span></h2>
+      <p>Discover places and experiences worth sharing.</p>
+    </div>
+    <div class="register-visual__seal" aria-hidden="true"><span>✦</span><small>CURATED<br>WITH CARE</small></div>
+  </section>
 
-  {% comment %}
-    หมายเหตุสำหรับฝั่ง frontend:
-    - ห้ามลบ {% csrf_token %} (ถ้าลบ ฟอร์มจะส่งไม่ได้ ขึ้น 403)
-    - ห้ามเปลี่ยน name ของ input (username, email, password1, password2)
-      เพราะ backend อ่านค่าจาก name เหล่านี้
-    - ตกแต่ง class / layout / label ได้ตามสบาย
-  {% endcomment %}
-  <form method="post" action="{% url 'signup' %}" novalidate>
-    {% csrf_token %}
+  <section class="register-panel">
+    <div class="register-panel__inner">
+      <a class="register-mobile-brand" href="{% url 'welcome' %}" aria-label="Mahamongkol welcome page">
+        <span class="register-brand__icon">M</span><span>mahamongkol</span>
+      </a>
 
-    {% if form.non_field_errors %}
-      <div class="form-errors">
-        {% for error in form.non_field_errors %}
-          <p>{{ error }}</p>
-        {% endfor %}
+      <div class="register-heading">
+        <p class="eyebrow">YOUR NEXT CHAPTER</p>
+        <h1>Create your<br><span>account.</span></h1>
+        <p>Join Mahamongkol and make your next booking feel effortless.</p>
       </div>
-    {% endif %}
 
-    <div>
-      <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
-      <input type="text" id="{{ form.username.id_for_label }}" name="username" value="{{ form.username.value|default:'' }}" autocomplete="username" required>
-      {% for error in form.username.errors %}
-        <small class="field-error">{{ error }}</small>
-      {% endfor %}
+      <form class="register-form" method="post" action="{% url 'signup' %}" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+        <div class="register-errors" role="alert">
+          {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+        </div>
+        {% endif %}
+
+        <fieldset class="register-role-picker">
+          <legend>Choose your account type</legend>
+          <div class="register-role-picker__options">
+            <label class="register-role-option">
+              <input type="radio" name="account_type" value="customer" required
+                {% if not form.data.account_type or form.data.account_type == 'customer' %}checked{% endif %}>
+              <span class="register-role-option__card">
+                <span class="register-role-option__icon" aria-hidden="true">♙</span>
+                <span class="register-role-option__copy"><strong>Customer</strong><small>Discover places and book experiences.</small></span>
+                <span class="register-role-option__check" aria-hidden="true">✓</span>
+              </span>
+            </label>
+            <label class="register-role-option">
+              <input type="radio" name="account_type" value="owner" required
+                {% if form.data.account_type == 'owner' %}checked{% endif %}>
+              <span class="register-role-option__card">
+                <span class="register-role-option__icon" aria-hidden="true">⌂</span>
+                <span class="register-role-option__copy"><strong>Store owner</strong><small>Manage your business and bookings.</small></span>
+                <span class="register-role-option__check" aria-hidden="true">✓</span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="register-form__grid">
+          <div class="register-field">
+            <label for="{{ form.username.id_for_label }}">Username</label>
+            <input class="register-input" type="text" id="{{ form.username.id_for_label }}" name="username"
+              value="{{ form.username.value|default:'' }}" autocomplete="username" placeholder="Choose a username"
+              required {% if form.username.errors %}aria-invalid="true" aria-describedby="register-username-error"{% endif %}>
+            {% if form.username.errors %}<div class="register-field__error" id="register-username-error" role="alert">{% for error in form.username.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+          </div>
+
+          <div class="register-field">
+            <label for="{{ form.email.id_for_label }}">Email address</label>
+            <input class="register-input" type="email" id="{{ form.email.id_for_label }}" name="email"
+              value="{{ form.email.value|default:'' }}" autocomplete="email" placeholder="you@example.com"
+              required {% if form.email.errors %}aria-invalid="true" aria-describedby="register-email-error"{% endif %}>
+            {% if form.email.errors %}<div class="register-field__error" id="register-email-error" role="alert">{% for error in form.email.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+          </div>
+
+          <div class="register-field register-field--wide">
+            <label for="{{ form.password1.id_for_label }}">Password</label>
+            <input class="register-input" type="password" id="{{ form.password1.id_for_label }}" name="password1"
+              autocomplete="new-password" placeholder="Create a password" required
+              {% if form.password1.errors %}aria-invalid="true" aria-describedby="register-password-error"{% endif %}>
+            <small class="register-field__hint">Use at least 8 characters and avoid common or all-numeric passwords.</small>
+            {% if form.password1.errors %}<div class="register-field__error" id="register-password-error" role="alert">{% for error in form.password1.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+          </div>
+
+          <div class="register-field register-field--wide">
+            <label for="{{ form.password2.id_for_label }}">Confirm password</label>
+            <input class="register-input" type="password" id="{{ form.password2.id_for_label }}" name="password2"
+              autocomplete="new-password" placeholder="Enter your password again" required
+              {% if form.password2.errors %}aria-invalid="true" aria-describedby="register-confirm-error"{% endif %}>
+            {% if form.password2.errors %}<div class="register-field__error" id="register-confirm-error" role="alert">{% for error in form.password2.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+          </div>
+        </div>
+
+        <button class="register-submit" type="submit">Create account <span aria-hidden="true">→</span></button>
+      </form>
+
+      <p class="register-footer">Already have an account? <a href="{% url 'login' %}">Sign in</a></p>
+      <p class="register-note"><span aria-hidden="true">✦</span> Thoughtful places. Meaningful moments.</p>
     </div>
-
-    <div>
-      <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
-      <input type="email" id="{{ form.email.id_for_label }}" name="email" value="{{ form.email.value|default:'' }}" autocomplete="email" required>
-      {% for error in form.email.errors %}
-        <small class="field-error">{{ error }}</small>
-      {% endfor %}
-    </div>
-
-    <div>
-      <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
-      <input type="password" id="{{ form.password1.id_for_label }}" name="password1" autocomplete="new-password" required>
-      {% for error in form.password1.errors %}
-        <small class="field-error">{{ error }}</small>
-      {% endfor %}
-    </div>
-
-    <div>
-      <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
-      <input type="password" id="{{ form.password2.id_for_label }}" name="password2" autocomplete="new-password" required>
-      {% for error in form.password2.errors %}
-        <small class="field-error">{{ error }}</small>
-      {% endfor %}
-    </div>
-
-    <button type="submit">สมัครสมาชิก</button>
-  </form>
+  </section>
 </main>
 {% endblock %}

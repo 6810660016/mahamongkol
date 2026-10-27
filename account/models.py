@@ -5,6 +5,7 @@ from django.db import models
 class User(AbstractUser):
     class Role(models.TextChoices):
         USER = "user", "ลูกค้า"
+        OWNER = "owner", "เจ้าของร้าน"
         ADMIN = "admin", "พนักงาน"
 
     email = models.EmailField("อีเมล", unique=True)
@@ -24,3 +25,7 @@ class User(AbstractUser):
     @property
     def is_user_role(self):
         return self.role == self.Role.USER
+
+    @property
+    def is_owner_role(self):
+        return self.role == self.Role.OWNER
