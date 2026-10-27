@@ -2,11 +2,13 @@ from datetime import date
 
 from django.http import Http404
 from django.shortcuts import redirect, render
+from account.decorators import customer_ui_required
 
 from restaurants.data import get_restaurant
 
 SLOTS = ("11:30", "13:00", "17:30", "19:00", "20:30")
 
+@customer_ui_required
 def booking_view(request, slug):
     restaurant = get_restaurant(slug)
     if restaurant is None:
@@ -52,10 +54,12 @@ def booking_view(request, slug):
         },
     )
 
+@customer_ui_required
 def my_queues_view(request):
     bookings = request.session.get("bookings", [])
     return render(request, "bookings/my_queues.html", {"bookings": bookings})
 
+@customer_ui_required
 def cancel_booking_view(request, booking_id):
     bookings = request.session.get("bookings", [])
     booking = next((item for item in bookings if item["id"] == booking_id), None)

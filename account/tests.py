@@ -8,6 +8,12 @@ User = get_user_model()
 
 
 class BookingFlowTests(TestCase):
+    def setUp(self):
+        self.customer = User.objects.create_user(
+            "customer-test", "customer@example.com", "Queue-pass-2026"
+        )
+        self.client.force_login(self.customer)
+
     def test_discovery_and_booking_pages_render(self):
         for url in (
             reverse('restaurants'),
@@ -112,6 +118,7 @@ class SignupTests(TestCase):
             'email': 'somchai@example.com',
             'password1': 'Queue-pass-2026',
             'password2': 'Queue-pass-2026',
+            'account_type': 'customer',
         }
         data.update(overrides)
         return data
@@ -128,6 +135,8 @@ class SignupTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'account/signup.html')
+        self.assertContains(response, 'name="account_type" value="customer"')
+        self.assertContains(response, 'name="account_type" value="owner"')
 
     def test_signup_creates_user_logs_in_and_redirects_home(self):
         response = self.client.post(
@@ -144,6 +153,17 @@ class SignupTests(TestCase):
             str(user.pk),
         )
 
+    def test_owner_signup_creates_owner_and_redirects_to_owner_workspace(self):
+        response = self.client.post(
+            self.url,
+            self.valid_data(username='owner-one', account_type='owner'),
+        )
+
+        self.assertRedirects(response, reverse('owner_dashboard'))
+        owner = User.objects.get(username='owner-one')
+        self.assertEqual(owner.role, User.Role.OWNER)
+        self.assertEqual(self.client.session['_auth_user_id'], str(owner.pk))
+
     def test_signup_ignores_role_admin_in_post(self):
         self.client.post(
             self.url,
@@ -154,6 +174,9 @@ class SignupTests(TestCase):
         self.assertEqual(user.role, User.Role.USER)
         self.assertFalse(user.is_staff)
 
+    def test_invalid_account_type_is_rejected(self):
+        self.post_invalid(account_type='admin')
+
     def test_logged_in_user_is_redirected_home(self):
         user = User.objects.create_user(
             'existing',
@@ -163,6 +186,34 @@ class SignupTests(TestCase):
         self.client.force_login(user)
 
         response = self.client.get(self.url)
+        self.assertRedirects(response, reverse('home'))
+
+    def test_logged_in_owner_is_redirected_to_owner_workspace_from_signup(self):
+        owner = User.objects.create_user(
+            'existing-owner', 'existing-owner@example.com', 'Queue-pass-2026',
+            role=User.Role.OWNER,
+        )
+        self.client.force_login(owner)
+
+        self.assertRedirects(self.client.get(self.url), reverse('owner_dashboard'))
+
+    def test_login_routes_each_account_type_to_its_own_ui(self):
+        owner = User.objects.create_user(
+            'login-owner', 'login-owner@example.com', 'Queue-pass-2026',
+            role=User.Role.OWNER,
+        )
+        response = self.client.post(reverse('login'), {
+            'email': owner.email, 'password': 'Queue-pass-2026', 'remember': 'on',
+        })
+        self.assertRedirects(response, reverse('owner_dashboard'))
+
+        self.client.logout()
+        customer = User.objects.create_user(
+            'login-customer', 'login-customer@example.com', 'Queue-pass-2026',
+        )
+        response = self.client.post(reverse('login'), {
+            'email': customer.email, 'password': 'Queue-pass-2026', 'remember': 'on',
+        })
         self.assertRedirects(response, reverse('home'))
 
     def test_duplicate_username_is_rejected(self):
@@ -225,3 +276,28 @@ class SignupTests(TestCase):
             form.errors['email'],
             ['กรุณากรอกอีเมล'],
         )
+
+
+class LogoutTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='logout-user',
+            email='logout@example.com',
+            password='Queue-pass-2026',
+        )
+        self.client.force_login(self.user)
+
+    def test_settings_displays_sign_out_action(self):
+        response = self.client.get(reverse('settings'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'End your current session on this device.')
+        self.assertContains(response, reverse('logout'))
+
+    def test_logout_post_clears_session_and_redirects_to_welcome(self):
+        response = self.client.post(reverse('logout'))
+        self.assertRedirects(response, reverse('welcome'))
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_logout_rejects_get_requests(self):
+        response = self.client.get(reverse('logout'))
+        self.assertEqual(response.status_code, 405)

@@ -26,10 +26,14 @@ class SignupForm(UserCreationForm):
             "invalid": "รูปแบบอีเมลไม่ถูกต้อง",
         },
     )
+    account_type = forms.ChoiceField(
+        choices=(("customer", "Customer"), ("owner", "Store owner")),
+        error_messages={"required": "กรุณาเลือกประเภทบัญชี"},
+    )
 
     class Meta:
         model = User
-        # ห้ามใส่ role ในฟอร์ม: role ถูกบังคับเป็น USER ใน save()
+        # รับเฉพาะประเภทบัญชีสำหรับสมัครสาธารณะ ไม่รับ role/admin privilege จาก client
         fields = ("username", "email")
         labels = {
             "username": "ชื่อผู้ใช้",
@@ -82,7 +86,11 @@ class SignupForm(UserCreationForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         # สมัครผ่านหน้าเว็บได้เฉพาะลูกค้าเท่านั้น
-        user.role = User.Role.USER
+        user.role = (
+            User.Role.OWNER
+            if self.cleaned_data.get("account_type") == "owner"
+            else User.Role.USER
+        )
         user.is_staff = False
         user.is_superuser = False
         if commit:

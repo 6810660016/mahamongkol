@@ -3,8 +3,6 @@
 {% block title %}Sign in | Mahamongkol{% endblock %}
 {% block page_css %}
 <link rel="stylesheet" href="{% static 'account/css/login.css' %}">{% endblock %}
-{% block page_js %}
-<script src="{% static 'account/js/login.js' %}"></script>{% endblock %}
 {% block body_class %}login-page{% endblock %}
 {% block content %}
 <main class="auth-shell">
@@ -28,7 +26,9 @@
         <p>Sign in your account</p>
       </div>
 
-      <form class="auth-form" data-login-form novalidate>
+      <form class="auth-form" data-login-form method="post" action="{% url 'login' %}">
+        {% csrf_token %}
+        {% if error %}<div class="field-error" role="alert">{{ error }}</div>{% endif %}
         <label for="email">Your Email</label>
         <input id="email" name="email" type="email" autocomplete="email" placeholder="Enter your email">
         <small class="field-error" data-email-error></small>
@@ -49,7 +49,7 @@
       <button class="google-button" type="button" data-google-button>
         <span class="google-button__g">G</span> continue with Google
       </button>
-      <p class="auth-footer">Don't have an account? <a href="/signup">Register</a></p>
+      <p class="auth-footer">Don't have an account? <a href="{% url 'signup' %}">Register</a></p>
     </div>
   </section>
 </main>
