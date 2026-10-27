@@ -31,3 +31,18 @@
 .settings-actions .button { border-radius: 999px; }
 @media (max-width: 900px) { .settings-layout { width: min(100% - 48px, 720px); } }
 @media (max-width: 560px) { .settings-layout { width: calc(100% - 36px); padding-top: 27px; } }
+
+.settings-logout { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: min(1240px, calc(100% - 96px)); margin: 0 auto; padding: 22px 28px; border-radius: 13px; background: var(--white); box-shadow: 0 12px 26px rgba(49,41,25,.07); }
+.settings-logout__copy { display: flex; align-items: center; gap: 15px; }
+.settings-logout__icon { display: grid; flex: 0 0 auto; place-items: center; width: 43px; height: 43px; border-radius: 50%; color: #9b5142; background: #f7eae5; font-size: 1.2rem; }
+.settings-logout .eyebrow { margin-bottom: 5px; font-size: .62rem; }
+.settings-logout h2 { margin: 0; color: var(--ink); font-family: Merriweather, serif; font-size: 1.12rem; }
+.settings-logout__copy p:last-child { margin: 6px 0 0; color: var(--muted); font-size: .72rem; line-height: 1.5; }
+.settings-logout__button { display: inline-flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 164px; min-height: 50px; padding: 0 9px 0 20px; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; color: var(--white); background: linear-gradient(135deg, #064b38, #003324); box-shadow: 0 8px 18px rgba(0,62,46,.17), inset 0 1px rgba(255,255,255,.12); font: inherit; font-size: .77rem; font-weight: 700; transition: background .2s, box-shadow .2s, transform .2s; }
+.settings-logout__button span { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgba(229,196,110,.38); border-radius: 50%; color: var(--gold-light); background: rgba(255,255,255,.08); font-size: 1rem; transition: background .2s, transform .2s; }
+.settings-logout__button:hover { transform: translateY(-2px); background: linear-gradient(135deg, #0b6248, #06432f); box-shadow: 0 12px 24px rgba(0,62,46,.23), inset 0 1px rgba(255,255,255,.15); }
+.settings-logout__button:hover span { transform: translateX(2px); background: rgba(229,196,110,.12); }
+.settings-logout__button:active { transform: translateY(0); }
+.settings-logout__button:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+@media (max-width: 900px) { .settings-logout { width: min(100% - 48px, 720px); } }
+@media (max-width: 560px) { .settings-logout { align-items: stretch; flex-direction: column; width: calc(100% - 36px); margin-top: 2px; padding: 20px 17px; }.settings-logout__button { width: 100%; } }

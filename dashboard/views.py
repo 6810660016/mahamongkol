@@ -1,6 +1,8 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from account.decorators import customer_ui_required, owner_ui_required
 
 
+@customer_ui_required
 def home_view(request):
     categories = [
         ("restaurant", "Restaurants", "Discover handpicked menus"),
@@ -38,4 +40,12 @@ def home_view(request):
     )
 
 def welcome_view(request):
+    if request.user.is_authenticated:
+        return redirect("owner_dashboard" if request.user.is_owner_role else "home")
     return render(request, 'dashboard/welcome.html')
+
+
+@owner_ui_required
+def owner_dashboard_view(request):
+    """Owner portal UI prototype; all store data is client-side demo data."""
+    return render(request, "dashboard/owner_dashboard.html")

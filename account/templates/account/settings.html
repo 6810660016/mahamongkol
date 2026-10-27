@@ -18,6 +18,7 @@
       <a class="is-active" href="#profile"><span>♙</span> Personal details</a>
       <a href="#preferences"><span>◉</span> Preferences</a>
       <a href="#notifications"><span>♧</span> Notifications</a>
+      <a href="#account-security"><span>↪</span> Sign out</a>
       <div class="settings-menu__note"><span>✦</span><p><strong>Your comfort, your way.</strong><small>Changes are saved for this browser session.</small></p></div>
     </aside>
     <form class="settings-form" method="post">
@@ -47,5 +48,20 @@
       <div class="settings-actions"><span>Your choices are saved locally for this demo.</span><button class="button button--primary" type="submit">Save changes <span>→</span></button></div>
     </form>
   </div>
+
+  <section class="settings-logout" id="account-security" aria-labelledby="settings-logout-title">
+    <div class="settings-logout__copy">
+      <span class="settings-logout__icon" aria-hidden="true">↪</span>
+      <div>
+        <p class="eyebrow">ACCOUNT ACCESS</p>
+        <h2 id="settings-logout-title">Sign out</h2>
+        <p>End your current session on this device. You can sign in again anytime.</p>
+      </div>
+    </div>
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button class="settings-logout__button" type="submit">Sign out <span aria-hidden="true">→</span></button>
+    </form>
+  </section>
 </main>
 {% endblock %}

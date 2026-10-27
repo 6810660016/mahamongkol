@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Owner Studio | Mahamongkol{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'dashboard/css/owner_dashboard.css' %}?v=20261027-1">{% endblock %}
+{% block page_js %}<script src="{% static 'dashboard/js/owner_dashboard.js' %}?v=20261027-1" defer></script>{% endblock %}
+{% block body_class %}owner-preview-page{% endblock %}
+{% block content %}
+<main class="owner-app">
+  <aside class="owner-sidebar" aria-label="Owner workspace navigation">
+    <a class="owner-brand" href="{% url 'owner_dashboard' %}">
+      <span class="owner-brand__mark">M</span><span>mahamongkol<small>OWNER STUDIO</small></span>
+    </a>
+
+    <p class="owner-sidebar__label">WORKSPACE</p>
+    <nav class="owner-side-nav" aria-label="Workspace">
+      <a class="is-active" href="#overview"><span aria-hidden="true">▦</span> Overview</a>
+      <a href="#my-stores"><span aria-hidden="true">⌂</span> My stores <span class="owner-side-nav__count" data-nav-store-count>3</span></a>
+      <button type="button" data-open-store><span aria-hidden="true">＋</span> Add a store</button>
+    </nav>
+
+    <div class="owner-sidebar__bottom">
+      <div class="owner-preview-profile"><span class="owner-preview-profile__avatar">{{ request.user.username|first|upper }}</span><span><strong>{{ request.user.username }}</strong><small>Store owner</small></span><span class="owner-preview-profile__dots" aria-hidden="true">···</span></div>
+      <form class="owner-signout" method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit"><span aria-hidden="true">↪</span> Sign out</button></form>
+    </div>
+  </aside>
+
+  <div class="owner-main">
+    <header class="owner-topbar">
+      <div class="owner-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>Overview</strong></div>
+      <div class="owner-topbar__right"><span class="owner-preview-pill"><i></i> Preview mode</span><span class="owner-topbar__avatar" aria-label="Store owner">{{ request.user.username|first|upper }}</span></div>
+    </header>
+
+    <section class="owner-content" id="overview">
+      <div class="owner-hero">
+        <div class="owner-hero__copy">
+          <p class="eyebrow">MAHAMONGKOL · OWNER STUDIO</p>
+          <h1>Your places,<br><span>beautifully managed.</span></h1>
+          <p>Keep every location in one calm, clear workspace.</p>
+        </div>
+        <div class="owner-hero__art" aria-hidden="true"><span class="owner-hero__art-ring"></span><span class="owner-hero__art-mark">M</span><span class="owner-hero__art-spark">✦</span></div>
+        <button class="owner-primary-button" type="button" data-open-store><span aria-hidden="true">＋</span> Add a store</button>
+      </div>
+
+      <div class="owner-notice" role="status">
+        <span class="owner-notice__icon" aria-hidden="true">✦</span>
+        <p><strong>Prototype workspace</strong><span>Sample stores and changes stay in this page only. Publish approval rules are still to be confirmed with your team.</span></p>
+        <span class="owner-notice__tag">NOT SAVED</span>
+      </div>
+
+      <section class="owner-stats" aria-label="Store overview">
+        <article class="owner-stat-card"><span class="owner-stat-card__icon owner-stat-card__icon--green" aria-hidden="true">⌂</span><span class="owner-stat-card__label">Total stores</span><strong data-stat-total>3</strong><small>Across your workspace</small></article>
+        <article class="owner-stat-card"><span class="owner-stat-card__icon owner-stat-card__icon--gold" aria-hidden="true">✦</span><span class="owner-stat-card__label">Published</span><strong data-stat-published>2</strong><small>Visible in this demo</small></article>
+        <article class="owner-stat-card"><span class="owner-stat-card__icon owner-stat-card__icon--sand" aria-hidden="true">◷</span><span class="owner-stat-card__label">Drafts</span><strong data-stat-drafts>1</strong><small>Ready when you are</small></article>
+      </section>
+
+      <section class="owner-stores-section" id="my-stores" aria-labelledby="stores-title">
+        <div class="owner-section-heading">
+          <div><p class="eyebrow">YOUR COLLECTION</p><h2 id="stores-title">My stores <span data-heading-store-count>3</span></h2></div>
+          <label class="owner-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Search your stores" aria-label="Search your stores" data-store-search></label>
+        </div>
+
+        <div class="owner-store-toolbar">
+          <div class="owner-filter-tabs" role="group" aria-label="Filter stores">
+            <button class="is-active" type="button" data-filter="all">All stores</button>
+            <button type="button" data-filter="published">Published</button>
+            <button type="button" data-filter="draft">Drafts</button>
+            <button type="button" data-filter="closed">Closed</button>
+          </div>
+          <span class="owner-demo-label"><i></i> Sample listings</span>
+        </div>
+
+        <div class="owner-store-grid" data-store-grid aria-live="polite"></div>
+        <div class="owner-empty-state" data-empty-state hidden>
+          <span aria-hidden="true">⌂</span><h3>No stores found</h3><p>Try another search or add a new location.</p>
+          <button class="owner-text-button" type="button" data-open-store>Add a store <span aria-hidden="true">→</span></button>
+        </div>
+      </section>
+
+      <footer class="owner-footer"><span>MAHAMONGKOL OWNER STUDIO</span><span>Preview only · No information is saved</span></footer>
+    </section>
+  </div>
+</main>
+
+<dialog class="owner-dialog" data-store-dialog aria-labelledby="store-dialog-title">
+  <form class="owner-dialog__form" data-store-form>
+    <div class="owner-dialog__header">
+      <div><p class="eyebrow">STORE DETAILS · PREVIEW</p><h2 id="store-dialog-title" data-dialog-title>Add a store</h2><p>Start with the essentials. Add custom details whenever you need them.</p></div>
+      <button class="owner-dialog__close" type="button" aria-label="Close dialog" data-close-dialog>×</button>
+    </div>
+
+    <div class="owner-dialog__fields">
+      <label class="owner-field owner-field--wide"><span>Store name <b>*</b></span><input name="name" required maxlength="100" placeholder="e.g. The Garden Table"></label>
+      <label class="owner-field"><span>Category <b>*</b></span><select name="category" required><option value="">Choose a category</option><option>Restaurant</option><option>Café</option><option>Wellness</option><option>Other</option></select></label>
+      <label class="owner-field"><span>Price range</span><select name="price"><option value="">Not specified</option><option>$ · Casual</option><option>$$ · Mid-range</option><option>$$$ · Premium</option></select></label>
+      <label class="owner-field owner-field--wide"><span>Address <b>*</b></span><input name="address" required maxlength="220" placeholder="Street, district, city"></label>
+      <label class="owner-field"><span>Opening hours</span><input name="hours" maxlength="120" placeholder="Daily · 10:00 AM – 9:00 PM"></label>
+      <label class="owner-field"><span>Image URL</span><input name="image" type="url" placeholder="https://..."></label>
+      <label class="owner-field owner-field--wide"><span>Description</span><textarea name="description" rows="3" maxlength="500" placeholder="What makes this place special?"></textarea></label>
+    </div>
+
+    <section class="owner-extra-fields" aria-labelledby="extra-fields-title">
+      <div class="owner-extra-fields__heading"><div><h3 id="extra-fields-title">Extra details <small>Optional</small></h3><p>Add custom information to fit your store.</p></div><button class="owner-outline-button" type="button" data-add-extra>＋ Add detail</button></div>
+      <div class="owner-extra-fields__list" data-extra-list></div>
+    </section>
+
+    <div class="owner-dialog__footer"><span><b>*</b> Required fields · Changes are preview-only</span><div><button class="owner-cancel-button" type="button" data-close-dialog>Cancel</button><button class="owner-primary-button" type="submit"><span aria-hidden="true">＋</span> Save as draft</button></div></div>
+  </form>
+</dialog>
+<div class="owner-toast" data-owner-toast role="status" aria-live="polite"></div>
+{% endblock %}
