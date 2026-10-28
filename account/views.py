@@ -1,8 +1,58 @@
+import secrets
+import time
+
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth.hashers import constant_time_compare
+from django.core.mail import send_mail
+from django.core.signing import salted_hmac
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
-from .forms import SignupForm
+from .forms import NewPasswordForm, PasswordResetEmailForm, PasswordResetOTPForm, SignupForm
+
+OTP_LIFETIME_SECONDS = 10 * 60
+OTP_MAX_ATTEMPTS = 5
+OTP_RESEND_DELAY_SECONDS = 60
+
+
+def _otp_hash(email, otp):
+    return salted_hmac(
+        "account.password_reset_otp", f"{email}:{otp}", secret=settings.SECRET_KEY
+    ).hexdigest()
+
+
+def _send_reset_otp(email, otp):
+    send_mail(
+        "รหัส OTP สำหรับรีเซ็ตรหัสผ่าน Mahamongkol",
+        f"รหัส OTP ของคุณคือ {otp}\nรหัสนี้ใช้ได้ 10 นาที หากคุณไม่ได้ร้องขอให้ละเว้นอีเมลนี้",
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        fail_silently=False,
+    )
+
+
+def _create_and_send_otp(request, email):
+    otp = f"{secrets.randbelow(1_000_000):06d}"
+    request.session["password_reset_email"] = email
+    request.session["password_reset_otp_hash"] = _otp_hash(email, otp)
+    request.session["password_reset_otp_expires"] = int(time.time()) + OTP_LIFETIME_SECONDS
+    request.session["password_reset_otp_sent"] = int(time.time())
+    request.session["password_reset_otp_attempts"] = 0
+    request.session.pop("password_reset_verified_until", None)
+    _send_reset_otp(email, otp)
+
+
+def _clear_password_reset_session(request):
+    for key in (
+        "password_reset_email",
+        "password_reset_otp_hash",
+        "password_reset_otp_expires",
+        "password_reset_otp_sent",
+        "password_reset_otp_attempts",
+        "password_reset_verified_until",
+    ):
+        request.session.pop(key, None)
 
 
 def login_view(request):
@@ -29,7 +79,97 @@ def login_view(request):
             return redirect(destination)
         error = "Email or password is incorrect. Please try again."
 
-    return render(request, "account/login.html", {"error": error})
+    password_changed = request.session.pop("password_reset_complete", False)
+    return render(request, "account/login.html", {"error": error, "password_changed": password_changed})
+
+
+def password_reset_view(request):
+    form = PasswordResetEmailForm(request.POST or None)
+    error = ""
+    if request.method == "POST" and form.is_valid():
+        email = form.cleaned_data["email"]
+        user = get_user_model().objects.filter(email__iexact=email, is_active=True).first()
+        if user:
+            try:
+                _create_and_send_otp(request, user.email)
+            except Exception:
+                _clear_password_reset_session(request)
+                error = "ส่งอีเมลไม่สำเร็จ กรุณาตรวจสอบการตั้งค่าอีเมลแล้วลองอีกครั้ง"
+                return render(request, "account/password_reset_form.html", {"form": form, "error": error})
+        else:
+            # Keep the response the same for known and unknown email addresses.
+            request.session["password_reset_email"] = email
+            request.session["password_reset_otp_hash"] = ""
+            request.session["password_reset_otp_expires"] = int(time.time()) + OTP_LIFETIME_SECONDS
+            request.session["password_reset_otp_sent"] = int(time.time())
+            request.session["password_reset_otp_attempts"] = 0
+        return redirect("password_reset_verify")
+    return render(request, "account/password_reset_form.html", {"form": form, "error": error})
+
+
+def password_reset_verify_view(request):
+    email = request.session.get("password_reset_email")
+    if not email:
+        return redirect("password_reset")
+
+    error = ""
+    form = PasswordResetOTPForm(request.POST or None)
+    if request.method == "POST":
+        if request.POST.get("action") == "resend":
+            sent_at = request.session.get("password_reset_otp_sent", 0)
+            if time.time() - sent_at < OTP_RESEND_DELAY_SECONDS:
+                error = "กรุณารอสักครู่ก่อนขอรหัสใหม่"
+            else:
+                user = get_user_model().objects.filter(email__iexact=email, is_active=True).first()
+                if user:
+                    try:
+                        _create_and_send_otp(request, user.email)
+                    except Exception:
+                        error = "ส่งอีเมลไม่สำเร็จ กรุณาลองอีกครั้ง"
+                else:
+                    request.session["password_reset_otp_sent"] = int(time.time())
+                    request.session["password_reset_otp_expires"] = int(time.time()) + OTP_LIFETIME_SECONDS
+                if not error:
+                    error = "ส่งรหัส OTP ใหม่แล้ว โปรดตรวจสอบอีเมลของคุณ"
+        elif form.is_valid():
+            if time.time() > request.session.get("password_reset_otp_expires", 0):
+                error = "รหัส OTP หมดอายุแล้ว กรุณาขอรหัสใหม่"
+            elif request.session.get("password_reset_otp_attempts", 0) >= OTP_MAX_ATTEMPTS:
+                error = "ลองรหัสผิดหลายครั้งแล้ว กรุณาขอรหัสใหม่"
+            elif not request.session.get("password_reset_otp_hash"):
+                error = "อีเมลนี้ไม่มีบัญชีที่ใช้งานได้ กรุณาตรวจสอบอีเมล"
+            elif constant_time_compare(
+                _otp_hash(email, form.cleaned_data["otp"]),
+                request.session["password_reset_otp_hash"],
+            ):
+                request.session["password_reset_verified_until"] = int(time.time()) + OTP_LIFETIME_SECONDS
+                return redirect("password_reset_new")
+            else:
+                request.session["password_reset_otp_attempts"] = request.session.get("password_reset_otp_attempts", 0) + 1
+                error = "รหัส OTP ไม่ถูกต้อง กรุณาลองอีกครั้ง"
+
+    return render(request, "account/password_reset_verify.html", {"form": form, "email": email, "error": error})
+
+
+def password_reset_new_view(request):
+    email = request.session.get("password_reset_email")
+    verified_until = request.session.get("password_reset_verified_until", 0)
+    if not email or time.time() > verified_until:
+        _clear_password_reset_session(request)
+        return redirect("password_reset")
+
+    user = get_user_model().objects.filter(email__iexact=email, is_active=True).first()
+    if not user:
+        _clear_password_reset_session(request)
+        return redirect("password_reset")
+
+    form = NewPasswordForm(user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        _clear_password_reset_session(request)
+        request.session["password_reset_complete"] = True
+        return redirect("login")
+    return render(request, "account/password_reset_new.html", {"form": form})
 
 
 def signup_view(request):
