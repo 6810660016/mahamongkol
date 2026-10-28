@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Owner application | Mahamongkol{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/owner_application.css' %}?v=20261028-1">{% endblock %}
+{% block body_class %}owner-application-page{% endblock %}
+{% block content %}
+<main class="owner-status-shell">
+  <a class="owner-status-brand" href="{% url 'home' %}"><span>M</span> mahamongkol</a>
+  <section class="owner-status-card">
+    <div class="owner-status-card__icon" aria-hidden="true">{% if owner_approved %}✓{% else %}◷{% endif %}</div>
+    <p class="eyebrow">OWNER APPLICATION</p>
+    <h1>{% if owner_approved %}You’re ready to grow.{% else %}A new chapter<br><span>is on its way.</span>{% endif %}</h1>
+    <span class="owner-status-badge {% if owner_approved %}is-approved{% endif %}">{% if owner_approved %}Approved{% else %}Awaiting admin approval{% endif %}</span>
+    <p class="owner-status-card__description">{% if owner_approved %}Owner access is active on your account. Book your favourite places or switch to your Owner Studio whenever you like.{% else %}Your request is with our admin team. You can keep discovering places and booking as a customer while we review it.{% endif %}</p>
+    {% if application %}<dl class="owner-status-details"><div><dt>Business</dt><dd>{{ application.business_name }}</dd></div><div><dt>Contact</dt><dd>{{ application.contact_name }}</dd></div><div><dt>Submitted</dt><dd>{{ application.submitted_at|date:'d M Y' }}</dd></div></dl>{% endif %}
+    <div class="owner-status-actions">
+      {% if owner_approved %}<form method="post" action="{% url 'switch_ui' %}">{% csrf_token %}<input type="hidden" name="interface" value="owner"><button class="owner-apply-button" type="submit">Open Owner Studio <span>→</span></button></form>{% else %}<a class="owner-apply-button" href="{% url 'home' %}">Continue as customer <span>→</span></a><a class="owner-status-refresh" href="{% url 'owner_application_status' %}">Check application status ↻</a>{% endif %}
+      {% if owner_approved %}<a class="owner-status-refresh" href="{% url 'home' %}">Continue as customer</a>{% endif %}
+    </div>
+    <p class="owner-status-footnote">One account. Your bookings and your business, together.</p>
+  </section>
+  <form class="owner-status-signout" method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+</main>
+{% endblock %}

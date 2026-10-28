@@ -30,6 +30,7 @@
 
       <form class="auth-form" data-login-form method="post" action="{% url 'login' %}">
         {% csrf_token %}
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
         {% if error %}<div class="field-error" role="alert">{{ error }}</div>{% endif %}
         <label for="email">Your Email</label>
         <input id="email" name="email" type="email" autocomplete="email" placeholder="Enter your email">

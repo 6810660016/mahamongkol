@@ -1,4 +1,6 @@
 /* Owner preview UI: intentionally isolated from customer-page styles. */
+.owner-app button:focus-visible { outline:2px solid #c99e45;outline-offset:3px; }
+@media(max-width:760px) { .owner-app .owner-sidebar__bottom { display:flex;align-items:center;gap:12px;margin-top:12px; }.owner-app .owner-sidebar__bottom .owner-preview-profile { display:none; }.owner-app .owner-ui-switch { margin:0; }.owner-app .owner-signout { margin-left:auto;padding:0;border:0; } }
 .owner-preview-page { background: #f6f2e9; color: #20352d; }
 .owner-app { --owner-green:#164b3b; --owner-deep:#10372c; --owner-gold:#c99e45; --owner-muted:#78817a; --owner-line:#e9e5db; min-height:100vh; display:grid; grid-template-columns:258px minmax(0,1fr); font-family:inherit; }
 .owner-sidebar { background:#fffefa; border-right:1px solid var(--owner-line); padding:28px 18px 20px; display:flex; flex-direction:column; min-height:100vh; position:sticky; top:0; height:100vh; }
@@ -14,6 +16,7 @@
 .owner-side-nav a>span:first-child,.owner-side-nav button>span:first-child { width:17px; font-size:17px; text-align:center; }
 .owner-side-nav__count { margin-left:auto; border-radius:99px; background:#fff; padding:3px 8px; color:#718078; font-size:11px; }
 .owner-sidebar__bottom { margin-top:auto; }
+.owner-ui-switch { margin:0 0 14px; }.owner-ui-switch button { display:flex;align-items:center;gap:10px;width:100%;padding:12px;border:1px solid #d8e3d5;border-radius:10px;background:#f0f5ed;color:#426c4e;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer; }.owner-ui-switch button:hover { background:#e3eedf;border-color:#aec5a6; }.owner-ui-switch button:focus-visible { outline:2px solid #bb974e;outline-offset:3px; }
 .owner-preview-profile { display:flex; align-items:center; gap:10px; padding:15px 8px; border-top:1px solid var(--owner-line); }
 .owner-preview-profile__avatar,.owner-topbar__avatar { width:34px; height:34px; display:grid; place-items:center; border-radius:50%; background:#e8efe8; color:var(--owner-green); font-weight:700; }
 .owner-preview-profile strong,.owner-preview-profile small { display:block; }

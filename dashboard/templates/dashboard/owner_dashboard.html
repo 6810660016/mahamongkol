@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Owner Studio | Mahamongkol{% endblock %}
-{% block page_css %}<link rel="stylesheet" href="{% static 'dashboard/css/owner_dashboard.css' %}?v=20261027-1">{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'dashboard/css/owner_dashboard.css' %}?v=20261028-1">{% endblock %}
 {% block page_js %}<script src="{% static 'dashboard/js/owner_dashboard.js' %}?v=20261027-1" defer></script>{% endblock %}
 {% block body_class %}owner-preview-page{% endblock %}
 {% block content %}
@@ -19,6 +19,7 @@
     </nav>
 
     <div class="owner-sidebar__bottom">
+      <form class="owner-ui-switch" method="post" action="{% url 'switch_ui' %}">{% csrf_token %}<input type="hidden" name="interface" value="customer"><button type="submit"><span aria-hidden="true">⇄</span> Switch to customer</button></form>
       <div class="owner-preview-profile"><span class="owner-preview-profile__avatar">{{ request.user.username|first|upper }}</span><span><strong>{{ request.user.username }}</strong><small>Store owner</small></span><span class="owner-preview-profile__dots" aria-hidden="true">···</span></div>
       <form class="owner-signout" method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit"><span aria-hidden="true">↪</span> Sign out</button></form>
     </div>
