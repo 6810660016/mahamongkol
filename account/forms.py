@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib.auth import password_validation
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import SetPasswordForm
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 
 from .models import OwnerApplication, User
 
@@ -12,6 +14,38 @@ PASSWORD_ERROR_MESSAGES = {
     "password_entirely_numeric": "รหัสผ่านต้องไม่เป็นตัวเลขทั้งหมด",
     "password_too_similar": "รหัสผ่านคล้ายกับ%(verbose_name)sมากเกินไป",
 }
+
+
+class PasswordResetEmailForm(forms.Form):
+    email = forms.EmailField(label="อีเมล", max_length=254)
+
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
+
+
+class PasswordResetOTPForm(forms.Form):
+    otp = forms.CharField(
+        label="รหัส OTP",
+        min_length=6,
+        max_length=6,
+        validators=[RegexValidator(r"^\d{6}$", "กรุณากรอกรหัส OTP 6 หลัก")],
+    )
+
+
+class NewPasswordForm(SetPasswordForm):
+    """Django's password reset form with project-specific validation messages."""
+
+    def clean_new_password2(self):
+        password = self.cleaned_data.get("new_password2")
+        if password:
+            try:
+                password_validation.validate_password(password, self.user)
+            except ValidationError as error:
+                self.add_error(
+                    "new_password2",
+                    [SignupForm._to_thai_password_error(e) for e in error.error_list],
+                )
+        return password
 
 
 class SignupForm(UserCreationForm):

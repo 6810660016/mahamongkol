@@ -26,6 +26,8 @@
         <p>Sign in your account</p>
       </div>
 
+      {% if password_changed %}<div class="reset-success" role="status">เปลี่ยนรหัสผ่านเรียบร้อยแล้ว เข้าสู่ระบบด้วยรหัสผ่านใหม่ได้เลย</div>{% endif %}
+
       <form class="auth-form" data-login-form method="post" action="{% url 'login' %}">
         {% csrf_token %}
         {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
@@ -41,7 +43,7 @@
 
         <div class="auth-form__meta">
           <label class="remember-me"><input type="checkbox" name="remember"><span>Remember me</span></label>
-          <a href="#forgot">Forgot password?</a>
+          <a href="{% url 'password_reset' %}">Forgot password?</a>
         </div>
         <button class="button button--primary button--full" type="submit">Login</button>
       </form>
