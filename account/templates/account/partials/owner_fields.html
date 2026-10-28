@@ -1,0 +1,9 @@
+{% for field in form %}
+  {% if field.name == 'contact_name' or field.name == 'business_name' %}
+  <div class="register-field">
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    <input class="register-input" id="{{ field.id_for_label }}" name="{{ field.name }}" value="{{ field.value|default:'' }}" maxlength="{{ field.field.max_length }}" required {% if field.name == 'contact_name' %}autocomplete="name" placeholder="Your full name"{% else %}autocomplete="organization" placeholder="Your business or store name"{% endif %} {% if field.errors %}aria-invalid="true" aria-describedby="{{ field.id_for_label }}_errors"{% endif %}>
+    {% if field.errors %}<div class="register-field__error" id="{{ field.id_for_label }}_errors" role="alert">{{ field.errors }}</div>{% endif %}
+  </div>
+  {% endif %}
+{% endfor %}

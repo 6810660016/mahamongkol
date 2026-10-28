@@ -3,7 +3,7 @@ from django.contrib.auth import password_validation
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 
-from .models import User
+from .models import OwnerApplication, User
 
 # ข้อความ error ของ password validator เป็นภาษาไทย (Django ยังไม่มีคำแปลไทยให้)
 PASSWORD_ERROR_MESSAGES = {
@@ -26,14 +26,10 @@ class SignupForm(UserCreationForm):
             "invalid": "รูปแบบอีเมลไม่ถูกต้อง",
         },
     )
-    account_type = forms.ChoiceField(
-        choices=(("customer", "Customer"), ("owner", "Store owner")),
-        error_messages={"required": "กรุณาเลือกประเภทบัญชี"},
-    )
 
     class Meta:
         model = User
-        # รับเฉพาะประเภทบัญชีสำหรับสมัครสาธารณะ ไม่รับ role/admin privilege จาก client
+        # Public registration always starts with customer access.
         fields = ("username", "email")
         labels = {
             "username": "ชื่อผู้ใช้",
@@ -85,14 +81,25 @@ class SignupForm(UserCreationForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        # สมัครผ่านหน้าเว็บได้เฉพาะลูกค้าเท่านั้น
-        user.role = (
-            User.Role.OWNER
-            if self.cleaned_data.get("account_type") == "owner"
-            else User.Role.USER
-        )
+        user.role = User.Role.USER
         user.is_staff = False
         user.is_superuser = False
         if commit:
             user.save()
         return user
+
+
+class OwnerApplicationForm(forms.ModelForm):
+    class Meta:
+        model = OwnerApplication
+        fields = ("contact_name", "business_name")
+        labels = {"contact_name": "Contact name", "business_name": "Business name"}
+        widgets = {
+            "contact_name": forms.TextInput(attrs={"autocomplete": "name", "placeholder": "Your full name"}),
+            "business_name": forms.TextInput(attrs={"placeholder": "Your business or store name"}),
+        }
+
+
+class OwnerSignupForm(SignupForm):
+    contact_name = forms.CharField(max_length=120, label="Contact name")
+    business_name = forms.CharField(max_length=160, label="Business name")

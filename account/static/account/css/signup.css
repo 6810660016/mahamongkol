@@ -25,6 +25,10 @@
 .register-heading > p:last-child { max-width: 420px; margin: 13px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.65; }
 
 .register-form { display: grid; gap: 23px; }
+.register-owner-entry { display:flex;align-items:center;gap:13px;margin:0 0 25px;padding:16px;border:1px solid #d8dbc9;border-radius:12px;background:#f2f5ec;color:var(--green);transition:background .2s,border-color .2s; }
+.register-owner-entry:hover { background:#e8efdf;border-color:#a9b99b; }
+.register-owner-entry__icon { display:grid;place-items:center;flex:none;width:39px;height:39px;border:1px solid #d4dec8;border-radius:10px;color:#9a7b3c;background:#fffefa;font-size:21px; }
+.register-owner-entry strong,.register-owner-entry small { display:block; }.register-owner-entry strong { font-size:.78rem; }.register-owner-entry small { margin-top:4px;color:#7d8977;font-size:.68rem;line-height:1.4; }.register-owner-entry>span:last-child { margin-left:auto;font-size:21px; }
 .register-errors { padding: 12px 15px; border: 1px solid rgba(157,62,47,.24); border-radius: 8px; color: #8e3328; background: #fff3ef; font-size: .82rem; }
 .register-errors p { margin: 0; }
 .register-role-picker { min-width: 0; margin: 0; padding: 0; border: 0; }

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Create account | Mahamongkol{% endblock %}
-{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/signup.css' %}?v=20261027-2">{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/signup.css' %}?v=20261028-1">{% endblock %}
 {% block body_class %}register-page{% endblock %}
 {% block content %}
 <main class="register-shell">
@@ -31,6 +31,8 @@
         <p>Join Mahamongkol and make your next booking feel effortless.</p>
       </div>
 
+      <a class="register-owner-entry" href="{% url 'owner_signup' %}"><span class="register-owner-entry__icon" aria-hidden="true">⌂</span><span><strong>Have a business?</strong><small>Apply for owner access with one account.</small></span><span aria-hidden="true">→</span></a>
+
       <form class="register-form" method="post" action="{% url 'signup' %}" novalidate>
         {% csrf_token %}
 
@@ -39,30 +41,6 @@
           {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
         </div>
         {% endif %}
-
-        <fieldset class="register-role-picker">
-          <legend>Choose your account type</legend>
-          <div class="register-role-picker__options">
-            <label class="register-role-option">
-              <input type="radio" name="account_type" value="customer" required
-                {% if not form.data.account_type or form.data.account_type == 'customer' %}checked{% endif %}>
-              <span class="register-role-option__card">
-                <span class="register-role-option__icon" aria-hidden="true">♙</span>
-                <span class="register-role-option__copy"><strong>Customer</strong><small>Discover places and book experiences.</small></span>
-                <span class="register-role-option__check" aria-hidden="true">✓</span>
-              </span>
-            </label>
-            <label class="register-role-option">
-              <input type="radio" name="account_type" value="owner" required
-                {% if form.data.account_type == 'owner' %}checked{% endif %}>
-              <span class="register-role-option__card">
-                <span class="register-role-option__icon" aria-hidden="true">⌂</span>
-                <span class="register-role-option__copy"><strong>Store owner</strong><small>Manage your business and bookings.</small></span>
-                <span class="register-role-option__check" aria-hidden="true">✓</span>
-              </span>
-            </label>
-          </div>
-        </fieldset>
 
         <div class="register-form__grid">
           <div class="register-field">
