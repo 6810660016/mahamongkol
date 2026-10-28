@@ -27,4 +27,3 @@ class LogoutTests(TestCase):
     def test_logout_rejects_get_requests(self):
         response = self.client.get(reverse('logout'))
         self.assertEqual(response.status_code, 405)
-        

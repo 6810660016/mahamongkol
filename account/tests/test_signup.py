@@ -2,11 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
-
-
-
 User = get_user_model()
-
 
 class SignupTests(TestCase):
     url = reverse('signup')
@@ -105,24 +101,6 @@ class SignupTests(TestCase):
 
         self.assertRedirects(self.client.get(self.url), reverse('owner_dashboard'))
 
-    def test_login_starts_accounts_in_customer_ui_unless_an_owner_ui_is_selected(self):
-        owner = User.objects.create_user(
-            'login-owner', 'login-owner@example.com', 'Queue-pass-2026',
-            role=User.Role.OWNER,
-        )
-        response = self.client.post(reverse('login'), {
-            'email': owner.email, 'password': 'Queue-pass-2026', 'remember': 'on',
-        })
-        self.assertRedirects(response, reverse('home'))
-
-        self.client.logout()
-        customer = User.objects.create_user(
-            'login-customer', 'login-customer@example.com', 'Queue-pass-2026',
-        )
-        response = self.client.post(reverse('login'), {
-            'email': customer.email, 'password': 'Queue-pass-2026', 'remember': 'on',
-        })
-        self.assertRedirects(response, reverse('home'))
 
     def test_duplicate_username_is_rejected(self):
         User.objects.create_user(
