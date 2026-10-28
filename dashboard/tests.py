@@ -21,7 +21,7 @@ class OwnerPreviewTests(TestCase):
         self.assertContains(response, "Prototype workspace")
         self.assertContains(response, "Publish approval rules are still to be confirmed")
         self.assertContains(response, "Sign out")
-        self.assertNotContains(response, "Back to customer site")
+        self.assertContains(response, "Switch to customer")
 
     def test_owner_preview_form_has_flexible_store_fields(self):
         response = self.client.get("/owner/")
@@ -41,10 +41,11 @@ class OwnerPreviewTests(TestCase):
         )
         self.client.force_login(customer)
 
-        response = self.client.get(reverse("owner_dashboard"))
-        self.assertRedirects(response, reverse("home"))
+        response = self.client.get(reverse("owner_dashboard"), follow=True)
+        self.assertRedirects(response, reverse("owner_signup"))
 
-    def test_owner_is_redirected_away_from_customer_pages(self):
-        for url in (reverse("welcome"), reverse("home"), reverse("restaurants"), reverse("my_queues")):
+    def test_legacy_owner_can_also_use_customer_pages(self):
+        for url in (reverse("home"), reverse("restaurants"), reverse("my_queues"), reverse("settings")):
             with self.subTest(url=url):
-                self.assertRedirects(self.client.get(url), reverse("owner_dashboard"))
+                self.assertEqual(self.client.get(url).status_code, 200)
+                self.assertEqual(self.client.session['active_ui'], 'customer')

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Become an owner | Mahamongkol{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/signup.css' %}?v=20261028-1"><link rel="stylesheet" href="{% static 'account/css/owner_application.css' %}?v=20261028-1">{% endblock %}
+{% block body_class %}owner-application-page{% endblock %}
+{% block content %}
+<main class="owner-apply-shell">
+  <aside class="owner-apply-story">
+    <a class="owner-apply-brand" href="{% url 'welcome' %}"><span>M</span> mahamongkol</a>
+    <div class="owner-apply-story__copy"><p class="eyebrow">GROW WITH MAHAMONGKOL</p><h1>Good places.<br>Great possibilities.</h1><p>A thoughtful home for your business, with room for every location.</p></div>
+    <ol class="owner-apply-steps"><li><span>01</span><div><strong>Tell us about your business</strong><small>Just the essentials to get started.</small></div></li><li><span>02</span><div><strong>Our admin team reviews your request</strong><small>Owner access starts after approval.</small></div></li><li><span>03</span><div><strong>One account, two experiences</strong><small>Switch between customer and owner anytime.</small></div></li></ol>
+    <div class="owner-apply-story__footer">MAHAMONGKOL · OWNER COMMUNITY</div>
+  </aside>
+  <section class="owner-apply-panel">
+    <a class="owner-apply-back" href="{% if request.user.is_authenticated %}{% url 'home' %}{% else %}{% url 'signup' %}{% endif %}">← {% if request.user.is_authenticated %}Back to customer{% else %}Back to registration{% endif %}</a>
+    <div class="owner-apply-heading"><p class="eyebrow">YOUR BUSINESS, YOUR NEXT CHAPTER</p><h2>Become an <span>owner.</span></h2><p>{% if request.user.is_authenticated %}Add owner access to your existing account. Your customer account stays with you.{% else %}Create one account for booking experiences and managing your business.{% endif %}</p></div>
+    {% if not request.user.is_authenticated %}<div class="owner-apply-signin">Already have an account? <a href="{% url 'login' %}?next={% url 'owner_signup' %}">Sign in first</a> to apply with it.</div>{% else %}<div class="owner-apply-signin">Applying as <strong>{{ request.user.username }}</strong><small>{{ request.user.email }}</small></div>{% endif %}
+    <form class="register-form" method="post" action="{% url 'owner_signup' %}" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="register-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+      {% if not request.user.is_authenticated %}
+      <fieldset class="owner-apply-fieldset"><legend>01 · Your account</legend>
+        <div class="register-form__grid">
+          {% for field in form %}{% if field.name != 'contact_name' and field.name != 'business_name' %}
+          <div class="register-field {% if field.name == 'password1' or field.name == 'password2' %}register-field--wide{% endif %}">
+            <label for="{{ field.id_for_label }}">{% if field.name == 'username' %}Username{% elif field.name == 'email' %}Email address{% elif field.name == 'password1' %}Password{% else %}Confirm password{% endif %}</label>
+            <input class="register-input" id="{{ field.id_for_label }}" name="{{ field.name }}" required {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %} {% if field.name == 'password1' or field.name == 'password2' %}type="password" autocomplete="new-password"{% elif field.name == 'email' %}type="email" autocomplete="email" value="{{ field.value|default:'' }}"{% else %}type="text" autocomplete="username" value="{{ field.value|default:'' }}"{% endif %} {% if field.errors %}aria-invalid="true" aria-describedby="{{ field.id_for_label }}_errors"{% endif %}>
+            {% if field.name == 'password1' %}<small class="register-field__hint">Use at least 8 characters and avoid common passwords.</small>{% endif %}
+            {% if field.errors %}<div class="register-field__error" id="{{ field.id_for_label }}_errors" role="alert">{{ field.errors }}</div>{% endif %}
+          </div>
+          {% endif %}{% endfor %}
+        </div>
+      </fieldset>
+      {% endif %}
+      <fieldset class="owner-apply-fieldset"><legend>{% if request.user.is_authenticated %}Your business{% else %}02 · Your business{% endif %}</legend><div class="register-form__grid">{% include 'account/partials/owner_fields.html' %}</div></fieldset>
+      <p class="owner-apply-review-note"><span aria-hidden="true">◷</span> Your request needs admin approval. You can use the customer interface while it is under review.</p>
+      <button class="register-submit" type="submit">Submit owner application <span aria-hidden="true">→</span></button>
+    </form>
+  </section>
+</main>
+{% endblock %}

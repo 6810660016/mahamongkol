@@ -42,6 +42,7 @@ button { cursor: pointer; }
 .home-nav__link { display: flex; align-items: center; gap: 8px; padding: 11px 16px; border-radius: 999px; color: rgba(255,255,255,.76); font-size: .78rem; transition: background .2s, color .2s; }
 .home-nav__link .nav-link-label { display: inline !important; white-space: nowrap; }
 .home-nav__link:hover, .home-nav__link.is-active { color: var(--white); background: rgba(255,255,255,.17); }
+.home-nav__switch { display:flex;align-items:center;margin:0 0 0 4px;border-left:1px solid #ffffff24;padding-left:5px; }.home-nav__switch button { border:0;background:transparent;font-family:inherit;cursor:pointer;color:var(--gold-light); }.home-nav__owner-entry { color:var(--gold-light); }.home-nav__switch button:focus-visible { outline:2px solid var(--gold-light);outline-offset:2px; }
 .nav-icon { font-size: 1.25rem; line-height: .8; }
 .inner-hero { position: relative; min-height: 340px; overflow: hidden; color: var(--white); background: url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=2200&q=90') center 48%/cover; }
 .inner-hero::before { position: absolute; inset: 0; content: ''; background: linear-gradient(180deg, rgba(0,0,0,.58), rgba(0,0,0,.55)); }
