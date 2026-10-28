@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Owner applications | Mahamongkol Admin{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/admin_owner_applications.css' %}?v=20261028-1">{% endblock %}
+{% block body_class %}application-admin-page{% endblock %}
+{% block content %}
+<main class="application-admin">
+  <aside class="application-admin-sidebar">
+    <a class="application-admin-brand" href="{% url 'owner_applications_admin' %}"><span>M</span><div>mahamongkol<small>ADMIN WORKSPACE</small></div></a>
+    <p class="application-admin-sidebar__label">COMMUNITY</p>
+    <a class="application-admin-sidebar__link is-active" href="{% url 'owner_applications_admin' %}"><span aria-hidden="true">▧</span> Owner applications <b>{{ pending_count }}</b></a>
+    <div class="application-admin-profile"><strong>{{ request.user.username }}</strong><small>Administrator</small><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out ↪</button></form></div>
+  </aside>
+  <section class="application-admin-main">
+    <header class="application-admin-topbar"><span>Administration <span aria-hidden="true">/</span> Owner applications</span><span class="application-admin-access">Admin access</span></header>
+    <div class="application-admin-content">
+      <div class="application-admin-heading"><p class="eyebrow">A GROWING COMMUNITY</p><h1>Welcome the next<br><span>great business.</span></h1><p>Review owner requests and give approved accounts access to both customer and owner experiences.</p></div>
+      <div class="application-admin-stats"><article><span>Awaiting review</span><strong>{{ pending_count }}</strong><small>Owner access has not been granted</small></article><article><span>Approved applications</span><strong>{{ approved_count }}</strong><small>Customer and owner, together</small></article></div>
+      {% for message in messages %}<div class="application-admin-message" role="status">✓ {{ message }}</div>{% endfor %}
+      <section aria-labelledby="applications-title">
+        <div class="application-admin-list-heading"><div><p class="eyebrow">OWNER ACCESS</p><h2 id="applications-title">Applications</h2></div><form class="application-admin-search" method="get"><input type="hidden" name="status" value="{{ active_status }}"><label class="application-admin-search__label" for="application-search">Search applicants</label><input id="application-search" type="search" name="q" value="{{ query }}" placeholder="Name, business or email"><button type="submit" aria-label="Search applicants">⌕</button></form></div>
+        <nav class="application-admin-filters" aria-label="Application status"><a class="{% if active_status == 'pending' %}is-active{% endif %}" href="?status=pending">Pending <span>{{ pending_count }}</span></a><a class="{% if active_status == 'approved' %}is-active{% endif %}" href="?status=approved">Approved <span>{{ approved_count }}</span></a><a class="{% if active_status == 'all' %}is-active{% endif %}" href="?status=all">All applications</a></nav>
+        <div class="application-admin-list">
+          {% for application in applications %}
+          <article class="application-review-card">
+            <div class="application-review-card__heading"><span class="application-review-card__avatar" aria-hidden="true">{{ application.business_name|first|upper }}</span><div><h3>{{ application.business_name }}</h3><p>Submitted {{ application.submitted_at|date:'d M Y · H:i' }}</p></div><span class="application-review-badge {% if application.status == 'approved' %}is-approved{% endif %}">{{ application.get_status_display }}</span></div>
+            <dl class="application-review-details"><div><dt>Contact name</dt><dd>{{ application.contact_name }}</dd></div><div><dt>Account</dt><dd>{{ application.user.username }}</dd></div><div><dt>Email address</dt><dd>{{ application.user.email }}</dd></div></dl>
+            <footer class="application-review-card__footer">{% if application.status == 'pending' %}<p>Approval adds owner access to this existing customer account.</p><form method="post" action="{% url 'approve_owner_application' application.pk %}">{% csrf_token %}<button type="submit">Approve owner access <span aria-hidden="true">→</span></button></form>{% else %}<p>Approved {{ application.reviewed_at|date:'d M Y · H:i' }}{% if application.reviewed_by %} by <strong>{{ application.reviewed_by.username }}</strong>{% endif %}</p><span class="application-review-card__approved">✓ Owner access active</span>{% endif %}</footer>
+          </article>
+          {% empty %}<div class="application-admin-empty"><span aria-hidden="true">✓</span><h3>{% if query %}No matching applications{% elif active_status == 'pending' %}All caught up.{% else %}No applications yet{% endif %}</h3><p>{% if query %}Try a different name, business or email.{% else %}Owner applications will appear here when submitted.{% endif %}</p></div>{% endfor %}
+        </div>
+      </section>
+      <footer class="application-admin-footer">MAHAMONGKOL · ADMIN WORKSPACE</footer>
+    </div>
+  </section>
+</main>
+{% endblock %}

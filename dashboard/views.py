@@ -1,5 +1,6 @@
 from django.shortcuts import redirect, render
 from account.decorators import customer_ui_required, owner_ui_required
+from account.ui import get_landing_url_name
 
 
 @customer_ui_required
@@ -41,7 +42,7 @@ def home_view(request):
 
 def welcome_view(request):
     if request.user.is_authenticated:
-        return redirect("owner_dashboard" if request.user.is_owner_role else "home")
+        return redirect(get_landing_url_name(request))
     return render(request, 'dashboard/welcome.html')
 
 

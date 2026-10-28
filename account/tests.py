@@ -135,8 +135,8 @@ class SignupTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'account/signup.html')
-        self.assertContains(response, 'name="account_type" value="customer"')
-        self.assertContains(response, 'name="account_type" value="owner"')
+        self.assertContains(response, reverse('owner_signup'))
+        self.assertContains(response, 'Apply for owner access')
 
     def test_signup_creates_user_logs_in_and_redirects_home(self):
         response = self.client.post(
@@ -153,15 +153,15 @@ class SignupTests(TestCase):
             str(user.pk),
         )
 
-    def test_owner_signup_creates_owner_and_redirects_to_owner_workspace(self):
+    def test_old_signup_payload_cannot_grant_owner_access(self):
         response = self.client.post(
             self.url,
             self.valid_data(username='owner-one', account_type='owner'),
         )
 
-        self.assertRedirects(response, reverse('owner_dashboard'))
+        self.assertRedirects(response, reverse('home'))
         owner = User.objects.get(username='owner-one')
-        self.assertEqual(owner.role, User.Role.OWNER)
+        self.assertEqual(owner.role, User.Role.USER)
         self.assertEqual(self.client.session['_auth_user_id'], str(owner.pk))
 
     def test_signup_ignores_role_admin_in_post(self):
@@ -174,8 +174,13 @@ class SignupTests(TestCase):
         self.assertEqual(user.role, User.Role.USER)
         self.assertFalse(user.is_staff)
 
-    def test_invalid_account_type_is_rejected(self):
-        self.post_invalid(account_type='admin')
+    def test_signup_payload_cannot_grant_approved_owner_or_superuser_access(self):
+        self.client.post(self.url, self.valid_data(
+            account_type='owner', role='owner', status='approved', is_superuser='on',
+        ))
+        user = User.objects.get(username='somchai')
+        self.assertEqual(user.role, User.Role.USER)
+        self.assertFalse(user.is_superuser)
 
     def test_logged_in_user_is_redirected_home(self):
         user = User.objects.create_user(
@@ -195,9 +200,13 @@ class SignupTests(TestCase):
         )
         self.client.force_login(owner)
 
+        session = self.client.session
+        session['active_ui'] = 'owner'
+        session.save()
+
         self.assertRedirects(self.client.get(self.url), reverse('owner_dashboard'))
 
-    def test_login_routes_each_account_type_to_its_own_ui(self):
+    def test_login_starts_accounts_in_customer_ui_unless_an_owner_ui_is_selected(self):
         owner = User.objects.create_user(
             'login-owner', 'login-owner@example.com', 'Queue-pass-2026',
             role=User.Role.OWNER,
@@ -205,7 +214,7 @@ class SignupTests(TestCase):
         response = self.client.post(reverse('login'), {
             'email': owner.email, 'password': 'Queue-pass-2026', 'remember': 'on',
         })
-        self.assertRedirects(response, reverse('owner_dashboard'))
+        self.assertRedirects(response, reverse('home'))
 
         self.client.logout()
         customer = User.objects.create_user(

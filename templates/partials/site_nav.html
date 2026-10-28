@@ -5,5 +5,13 @@
     <a class="home-nav__link {% if active_page == 'queues' %}is-active{% endif %}" href="{% url 'my_queues' %}" aria-label="My Q" title="My Q"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-link-label">My Q</span></a>
     <a class="home-nav__link {% if active_page == 'restaurants' %}is-active{% endif %}" href="{% url 'restaurants' %}" aria-label="Explore" title="Explore"><span class="nav-icon" aria-hidden="true">⌕</span><span class="nav-link-label">Explore</span></a>
     <a class="home-nav__link {% if active_page == 'settings' %}is-active{% endif %}" href="{% url 'settings' %}" aria-label="Settings" title="Settings"><span class="nav-icon" aria-hidden="true">⚙</span><span class="nav-link-label">Settings</span></a>
+    {% if request.user.is_owner_role %}
+    <form class="home-nav__switch" method="post" action="{% url 'switch_ui' %}">
+      {% csrf_token %}<input type="hidden" name="interface" value="owner">
+      <button class="home-nav__link" type="submit" aria-label="Switch to Owner Studio"><span class="nav-icon" aria-hidden="true">⇄</span><span class="nav-link-label">Owner Studio</span></button>
+    </form>
+    {% elif request.user.is_authenticated and not request.user.is_admin_role and not request.user.is_superuser %}
+    <a class="home-nav__link home-nav__owner-entry" href="{% if request.user.owner_application.status == 'pending' %}{% url 'owner_application_status' %}{% else %}{% url 'owner_signup' %}{% endif %}"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-link-label">{% if request.user.owner_application.status == 'pending' %}Application pending{% else %}Become an owner{% endif %}</span></a>
+    {% endif %}
   </div>
 </nav>
