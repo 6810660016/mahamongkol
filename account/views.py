@@ -9,6 +9,7 @@ from django.core.signing import salted_hmac
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from account.decorators import customer_ui_required
 from .forms import NewPasswordForm, PasswordResetEmailForm, PasswordResetOTPForm, SignupForm
 
 OTP_LIFETIME_SECONDS = 10 * 60
@@ -84,6 +85,8 @@ def login_view(request):
 
 
 def password_reset_view(request):
+    if request.user.is_authenticated:
+        return redirect("owner_dashboard" if request.user.is_owner_role else "home")
     form = PasswordResetEmailForm(request.POST or None)
     error = ""
     if request.method == "POST" and form.is_valid():
@@ -137,12 +140,13 @@ def password_reset_verify_view(request):
             elif request.session.get("password_reset_otp_attempts", 0) >= OTP_MAX_ATTEMPTS:
                 error = "ลองรหัสผิดหลายครั้งแล้ว กรุณาขอรหัสใหม่"
             elif not request.session.get("password_reset_otp_hash"):
-                error = "อีเมลนี้ไม่มีบัญชีที่ใช้งานได้ กรุณาตรวจสอบอีเมล"
+                error = "ไม่สามารถยืนยันรหัส OTP ได้ กรุณาตรวจสอบข้อมูลหรือขอรหัสใหม่"
             elif constant_time_compare(
                 _otp_hash(email, form.cleaned_data["otp"]),
                 request.session["password_reset_otp_hash"],
             ):
                 request.session["password_reset_verified_until"] = int(time.time()) + OTP_LIFETIME_SECONDS
+                request.session["password_reset_otp_hash"] = ""
                 return redirect("password_reset_new")
             else:
                 request.session["password_reset_otp_attempts"] = request.session.get("password_reset_otp_attempts", 0) + 1
@@ -194,6 +198,8 @@ def logout_view(request):
     logout(request)
     return redirect("welcome")
 
+
+@customer_ui_required
 def settings_view(request):
     if request.user.is_authenticated and request.user.is_owner_role:
         return redirect("owner_dashboard")
