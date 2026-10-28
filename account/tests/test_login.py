@@ -1,4 +1,3 @@
-
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -20,6 +19,7 @@ class LoginTests(TestCase):
         self.login_url = reverse("login")
         self.home_url = reverse("home")
         self.owner_dashboard_url = reverse("owner_dashboard")
+        self.owner_applications_admin_url = reverse("owner_applications_admin")
 
         self.customer = User.objects.create_user(
             username="customer-test",
@@ -32,6 +32,13 @@ class LoginTests(TestCase):
             email="owner@example.com",
             password=PASSWORD,
             role=User.Role.OWNER,
+        )
+
+        self.admin = User.objects.create_user(
+            username="admin-test",
+            email="admin@example.com",
+            password=PASSWORD,
+            role=User.Role.ADMIN,
         )
 
     def login(self, email, password=PASSWORD, remember=True, next_url=None):
@@ -48,10 +55,14 @@ class LoginTests(TestCase):
 
         return self.client.post(self.login_url, data)
 
+    # ---- Page rendering ----
+
     def test_login_page_renders(self):
         response = self.client.get(self.login_url)
 
         self.assertEqual(response.status_code, 200)
+
+    # ---- Successful login by role ----
 
     def test_customer_login_redirects_to_home(self):
         response = self.login(self.customer.email)
@@ -84,6 +95,17 @@ class LoginTests(TestCase):
         response = self.login(self.owner.email)
 
         self.assertRedirects(response, self.owner_dashboard_url)
+
+    def test_admin_login_redirects_to_owner_applications_admin(self):
+        response = self.login(self.admin.email)
+
+        self.assertRedirects(response, self.owner_applications_admin_url)
+        self.assertEqual(
+            str(self.client.session["_auth_user_id"]),
+            str(self.admin.pk),
+        )
+
+    # ---- Rejected credentials ----
 
     def test_login_rejects_wrong_password(self):
         response = self.login(
@@ -131,6 +153,8 @@ class LoginTests(TestCase):
             str(self.customer.pk),
         )
 
+    # ---- Already logged in ----
+
     def test_logged_in_customer_is_redirected_from_login_page(self):
         self.client.force_login(self.customer)
 
@@ -155,6 +179,28 @@ class LoginTests(TestCase):
         response = self.client.get(self.login_url)
 
         self.assertRedirects(response, self.owner_dashboard_url)
+
+    def test_logged_in_user_with_safe_next_is_redirected_to_next(self):
+        self.client.force_login(self.customer)
+
+        response = self.client.get(f"{self.login_url}?next=/queue/")
+
+        self.assertRedirects(
+            response,
+            "/queue/",
+            fetch_redirect_response=False,
+        )
+
+    def test_logged_in_user_with_external_next_is_redirected_to_home(self):
+        self.client.force_login(self.customer)
+
+        response = self.client.get(
+            f"{self.login_url}?next=https://evil.example.com"
+        )
+
+        self.assertRedirects(response, self.home_url)
+
+    # ---- `next` handling on login ----
 
     def test_login_redirects_to_safe_next_url(self):
         response = self.login(
@@ -194,6 +240,8 @@ class LoginTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["next_url"], "/queue/")
+
+    # ---- Remember me ----
 
     def test_remember_me_keeps_session_after_browser_close(self):
         self.login(self.customer.email, remember=True)
