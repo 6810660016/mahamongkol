@@ -36,11 +36,6 @@
   .auth-heading { margin-top: 60px; }
 }
 
-/* Password visibility toggle */
-.password-field {
-    position: relative;
-}
-
 /* Same look as the existing inputs, also when the type is switched to text */
 .auth-form .password-field input[type='password'],
 .auth-form .password-field input[type='text'] {
@@ -58,48 +53,4 @@
 .auth-form .password-field input:focus {
     border-color: var(--green);
     box-shadow: 0 0 0 3px rgba(0, 62, 46, .12);
-}
-
-.password-toggle {
-    position: absolute;
-    top: 50%;
-    right: 14px;
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    border: 0;
-    border-radius: 6px;
-    color: var(--muted);
-    background: transparent;
-    cursor: pointer;
-    transform: translateY(-50%);
-    transition: color .2s, background .2s;
-}
-
-.password-toggle:hover {
-    color: var(--ink);
-    background: rgba(0, 0, 0, .05);
-}
-
-.password-toggle:focus-visible {
-    outline: 2px solid var(--green);
-    outline-offset: 1px;
-}
-
-/* Bootstrap Icons */
-.password-toggle .bi {
-    font-size: 20px;
-    line-height: 1;
-}
-
-.password-toggle .icon-eye { display: inline; }
-.password-toggle .icon-eye-off { display: none; }
-
-.password-toggle[aria-pressed="true"] .icon-eye { display: none; }
-.password-toggle[aria-pressed="true"] .icon-eye-off { display: inline; }
-
-input::-ms-reveal {
-    display: none;
 }
