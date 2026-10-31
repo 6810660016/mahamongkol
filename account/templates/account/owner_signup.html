@@ -1,7 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Become an owner | Mahamongkol{% endblock %}
-{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/signup.css' %}?v=20261028-1"><link rel="stylesheet" href="{% static 'account/css/owner_application.css' %}?v=20261028-1">{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'account/css/signup.css' %}?v=20261028-1">
+<link rel="stylesheet" href="{% static 'account/css/owner_application.css' %}?v=20261028-1">
+<link rel="stylesheet" href="{% static 'account/css/password_toggle.css' %}">
+{% endblock %}
+{% block page_js %}<script src="{% static 'account/js/password_toggle.js' %}"></script>{% endblock %}
 {% block body_class %}owner-application-page{% endblock %}
 {% block content %}
 <main class="owner-apply-shell">
@@ -22,13 +27,33 @@
       <fieldset class="owner-apply-fieldset"><legend>01 · Your account</legend>
         <div class="register-form__grid">
           {% for field in form %}{% if field.name != 'contact_name' and field.name != 'business_name' %}
-          <div class="register-field {% if field.name == 'password1' or field.name == 'password2' %}register-field--wide{% endif %}">
-            <label for="{{ field.id_for_label }}">{% if field.name == 'username' %}Username{% elif field.name == 'email' %}Email address{% elif field.name == 'password1' %}Password{% else %}Confirm password{% endif %}</label>
-            <input class="register-input" id="{{ field.id_for_label }}" name="{{ field.name }}" required {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %} {% if field.name == 'password1' or field.name == 'password2' %}type="password" autocomplete="new-password"{% elif field.name == 'email' %}type="email" autocomplete="email" value="{{ field.value|default:'' }}"{% else %}type="text" autocomplete="username" value="{{ field.value|default:'' }}"{% endif %} {% if field.errors %}aria-invalid="true" aria-describedby="{{ field.id_for_label }}_errors"{% endif %}>
-            {% if field.name == 'password1' %}<small class="register-field__hint">Use at least 8 characters and avoid common passwords.</small>{% endif %}
-            {% if field.errors %}<div class="register-field__error" id="{{ field.id_for_label }}_errors" role="alert">{{ field.errors }}</div>{% endif %}
-          </div>
-          {% endif %}{% endfor %}
+<div class="register-field {% if field.name == 'password1' or field.name == 'password2' %}register-field--wide{% endif %}">
+  <label for="{{ field.id_for_label }}">{% if field.name == 'username' %}Username{% elif field.name == 'email' %}Email address{% elif field.name == 'password1' %}Password{% else %}Confirm password{% endif %}</label>
+
+  {% if field.name == 'password1' or field.name == 'password2' %}
+  <div class="password-field">
+    <input class="register-input" id="{{ field.id_for_label }}" name="{{ field.name }}" required
+      {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %}
+      type="password" autocomplete="new-password"
+      {% if field.errors %}aria-invalid="true" aria-describedby="{{ field.id_for_label }}_errors"{% endif %}>
+    <button type="button" class="password-toggle" data-password-toggle
+      aria-label="Show password" aria-pressed="false">
+      <i class="bi bi-eye icon-eye" aria-hidden="true"></i>
+      <i class="bi bi-eye-slash icon-eye-off" aria-hidden="true"></i>
+    </button>
+  </div>
+  {% else %}
+  <input class="register-input" id="{{ field.id_for_label }}" name="{{ field.name }}" required
+    {% if field.field.max_length %}maxlength="{{ field.field.max_length }}"{% endif %}
+    {% if field.name == 'email' %}type="email" autocomplete="email"{% else %}type="text" autocomplete="username"{% endif %}
+    value="{{ field.value|default:'' }}"
+    {% if field.errors %}aria-invalid="true" aria-describedby="{{ field.id_for_label }}_errors"{% endif %}>
+  {% endif %}
+
+  {% if field.name == 'password1' %}<small class="register-field__hint">Use at least 8 characters and avoid common passwords.</small>{% endif %}
+  {% if field.errors %}<div class="register-field__error" id="{{ field.id_for_label }}_errors" role="alert">{{ field.errors }}</div>{% endif %}
+</div>
+{% endif %}{% endfor %}
         </div>
       </fieldset>
       {% endif %}

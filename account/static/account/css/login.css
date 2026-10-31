@@ -13,7 +13,7 @@
 .auth-heading > p:last-child { margin: 14px 0 0; color: var(--muted); font-size: 1rem; }
 .auth-form { display: grid; gap: 11px; }
 .auth-form > label:not(.remember-me) { margin-top: 10px; font-size: .84rem; font-weight: 600; font-style: italic; }
-.auth-form input[type='email'], .auth-form input[type='password'] { width: 100%; height: 58px; padding: 0 17px; color: var(--ink); border: 1px solid #28251f; border-radius: 7px; outline: none; background: transparent; transition: border-color .2s, box-shadow .2s; }
+.auth-form input[type='email'] { width: 100%; height: 58px; padding: 0 17px; color: var(--ink); border: 1px solid #28251f; border-radius: 7px; outline: none; background: transparent; transition: border-color .2s, box-shadow .2s; }
 .auth-form input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,62,46,.12); }
 .auth-form input::placeholder { color: #aaa499; }
 .field-error { min-height: 0; color: #9d3e2f; font-size: .75rem; }
@@ -34,4 +34,23 @@
   .auth-visual { display: none; }
   .auth-panel { min-height: 100vh; padding: 40px 24px; }
   .auth-heading { margin-top: 60px; }
+}
+
+/* Same look as the existing inputs, also when the type is switched to text */
+.auth-form .password-field input[type='password'],
+.auth-form .password-field input[type='text'] {
+    width: 100%;
+    height: 58px;
+    padding: 0 52px 0 17px;
+    color: var(--ink);
+    border: 1px solid #28251f;
+    border-radius: 7px;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    transition: border-color .2s, box-shadow .2s;
+}
+.auth-form .password-field input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(0, 62, 46, .12);
 }

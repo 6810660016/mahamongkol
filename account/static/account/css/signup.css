@@ -57,6 +57,11 @@
 .register-input:hover { border-color: #aaa18f; }
 .register-input:focus { border-color: var(--green-soft); background: var(--white); box-shadow: 0 0 0 3px rgba(0,62,46,.1); }
 .register-input[aria-invalid="true"] { border-color: #b44d3f; }
+.password-field .register-input {
+  width: 100%;
+  margin: 0;
+  padding-right: 52px;
+}
 .register-field__hint { color: var(--muted); font-size: .68rem; line-height: 1.5; }
 .register-field__error { display: grid; gap: 3px; color: #9d3e2f; font-size: .7rem; line-height: 1.45; }
 .register-submit { display: flex; align-items: center; justify-content: space-between; min-height: 54px; padding: 0 20px; border: 1px solid var(--green); border-radius: 7px; color: var(--white); background: var(--green); font-size: .84rem; font-weight: 700; transition: background .2s, transform .2s, box-shadow .2s; }

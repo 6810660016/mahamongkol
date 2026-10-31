@@ -2,7 +2,10 @@
 {% load static %}
 {% block title %}Sign in | Mahamongkol{% endblock %}
 {% block page_css %}
-<link rel="stylesheet" href="{% static 'account/css/login.css' %}">{% endblock %}
+<link rel="stylesheet" href="{% static 'account/css/login.css' %}">
+<link rel="stylesheet" href="{% static 'account/css/password_toggle.css' %}">
+{% endblock %}
+{% block page_js %}<script src="{% static 'account/js/password_toggle.js' %}"></script>{% endblock %}
 {% block body_class %}login-page{% endblock %}
 {% block content %}
 <main class="auth-shell">
@@ -26,25 +29,40 @@
         <p>Sign in your account</p>
       </div>
 
-      {% if password_changed %}<div class="reset-success" role="status">เปลี่ยนรหัสผ่านเรียบร้อยแล้ว เข้าสู่ระบบด้วยรหัสผ่านใหม่ได้เลย</div>{% endif %}
+      {% if password_changed %}<div class="reset-success" role="status">เปลี่ยนรหัสผ่านเรียบร้อยแล้ว
+        เข้าสู่ระบบด้วยรหัสผ่านใหม่ได้เลย</div>{% endif %}
 
-      <form class="auth-form" data-login-form method="post" action="{% url 'login' %}">
+      <form class="auth-form" data-login-form method="post" action="{% url 'login' %}" novalidate>
         {% csrf_token %}
         {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
-        {% if error %}<div class="field-error" role="alert">{{ error }}</div>{% endif %}
         <label for="email">Your Email</label>
         <input id="email" name="email" type="email" autocomplete="email" placeholder="Enter your email">
         <small class="field-error" data-email-error></small>
 
         <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password"
-          placeholder="Enter your password">
+        <div class="password-field">
+          <input id="password" name="password" type="password" autocomplete="current-password"
+            placeholder="Enter your password">
+
+          <button type="button" class="password-toggle" data-password-toggle aria-label="Show password"
+            aria-pressed="false">
+            <i class="bi bi-eye icon-eye" aria-hidden="true"></i>
+            <i class="bi bi-eye-slash icon-eye-off" aria-hidden="true"></i>
+          </button>
+        </div>
         <small class="field-error" data-password-error></small>
 
+        {% if error %}
+        <div class="field-error" role="alert">
+          {{ error }}
+        </div>
+        {% endif %}
         <div class="auth-form__meta">
           <label class="remember-me"><input type="checkbox" name="remember"><span>Remember me</span></label>
           <a href="{% url 'password_reset' %}">Forgot password?</a>
         </div>
+
+
         <button class="button button--primary button--full" type="submit">Login</button>
       </form>
 
