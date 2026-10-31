@@ -108,3 +108,13 @@ class BookingFlowTests(TestCase):
         self.assertContains(response, 'aria-label="My Q"')
         self.assertContains(response, reverse('my_queues'))
 
+    def test_cancel_page_shows_booking_date(self):
+        booking_date = (date.today() + timedelta(days=1)).isoformat()
+        self.client.post(
+            reverse('booking', args=['salvia']),
+            {'date': booking_date, 'time': '19:00', 'guests': '2'},
+        )
+
+        response = self.client.get(reverse('cancel_booking', args=[1]))
+        self.assertContains(response, f'<strong>{booking_date}</strong>')
+        self.assertNotContains(response, '{{')
