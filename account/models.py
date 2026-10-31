@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Lower
 
 
 class User(AbstractUser):
@@ -18,6 +19,22 @@ class User(AbstractUser):
     )
 
     REQUIRED_FIELDS = ["email"]
+
+    class Meta(AbstractUser.Meta):
+        constraints = [
+            # Login looks users up by email, so emails must be unique ignoring case
+            models.UniqueConstraint(
+                Lower("email"),
+                name="account_user_email_ci_unique",
+                violation_error_message="A user with that email already exists.",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Admin and createsuperuser only lowercase the domain part
+        if self.email:
+            self.email = self.email.lower()
+        super().save(*args, **kwargs)
 
     @property
     def is_admin_role(self):
