@@ -12,8 +12,7 @@
         <div class="cancel-icon">!</div>
         <p class="eyebrow">CHANGE OF PLANS?</p>
         <h1 id="cancel-title">Cancel this<br>reservation?</h1>
-        <p class="cancel-copy">Your reservation at <strong>{{ booking.restaurant }}</strong> on <strong>{{ booking.date
-                }}</strong> at <strong>{{ booking.time }}</strong> will be removed from your upcoming plans.</p>
+        <p class="cancel-copy">Your reservation at <strong>{{ booking.restaurant }}</strong> on <strong>{{ booking.date }}</strong> at <strong>{{ booking.time }}</strong> will be removed from your upcoming plans.</p>
         <form method="post">{% csrf_token %}<button class="button cancel-confirm" type="submit">Yes, cancel
                 booking</button><a class="cancel-keep" href="{% url 'my_queues' %}">Keep my reservation</a></form>
     </section>
