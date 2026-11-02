@@ -9,6 +9,7 @@
     <a class="application-admin-brand" href="{% url 'owner_applications_admin' %}"><span>M</span><div>mahamongkol<small>ADMIN WORKSPACE</small></div></a>
     <p class="application-admin-sidebar__label">COMMUNITY</p>
     <a class="application-admin-sidebar__link is-active" href="{% url 'owner_applications_admin' %}"><span aria-hidden="true">▧</span> Owner applications <b>{{ pending_count }}</b></a>
+    <a class="application-admin-sidebar__link" href="{% url 'manage_restaurants' %}"><span aria-hidden="true">▣</span> Bookings</a>
     <div class="application-admin-profile"><strong>{{ request.user.username }}</strong><small>Administrator</small><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out ↪</button></form></div>
   </aside>
   <section class="application-admin-main">

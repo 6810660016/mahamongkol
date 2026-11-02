@@ -24,11 +24,11 @@
             <div>
               <p class="eyebrow">TABLE RESERVATION</p>
               <h2>{{ booking.restaurant }}</h2>
-            </div><span class="queue-status"><i></i>{{ booking.status }}</span>
+            </div><span class="queue-status"><i></i>{{ booking.get_status_display }}</span>
           </div>
           <div class="queue-card__details">
-            <span>▦ {{ booking.date }}</span>
-            <span>◷ {{ booking.time }}</span>
+            <span>▦ {{ booking.date|date:"Y-m-d" }}</span>
+            <span>◷ {{ booking.time|time:"H:i" }}</span>
             <span>♙ {{ booking.guests }} guest{{ booking.guests|pluralize }}</span>
           </div>
           <div class="queue-card__actions"><a href="{% url 'restaurant_detail' booking.slug %}">View place</a><a
