@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ restaurant.name }} bookings | Mahamongkol{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'bookings/css/manage.css' %}?v=20261102">{% endblock %}
+{% block body_class %}manage-page{% endblock %}
+{% block content %}
+<main class="manage-shell">
+  <header class="manage-header">
+    <a class="manage-back" href="{% url 'manage_restaurants' %}">← All restaurants</a>
+    <p class="eyebrow">BOOKING MANAGEMENT</p>
+    <h1>{{ restaurant.name }}</h1>
+    <p class="manage-lead">{{ booked_count }} of {{ table_count }} table{{ table_count|pluralize }} booked at {{ slot }} on {{ day|date:"Y-m-d" }}.</p>
+  </header>
+
+  <form class="manage-filter" method="get">
+    <label for="manage-date">Date</label>
+    <input id="manage-date" type="date" name="date" value="{{ day|date:'Y-m-d' }}">
+    <label for="manage-time">Time</label>
+    <select id="manage-time" name="time">
+      {% for s in slots %}
+      <option value="{{ s }}" {% if s == slot %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <button class="button button--primary" type="submit">View</button>
+  </form>
+
+  <section class="manage-card">
+    <h2>Tables at {{ slot }}</h2>
+    <table class="manage-table">
+      <thead>
+        <tr><th>Table</th><th>Seats</th><th>Status</th><th>Guest</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.table.name }}</td>
+          <td>{{ row.table.capacity }}</td>
+          <td><span class="manage-badge {% if row.booking %}manage-badge--booked{% else %}manage-badge--available{% endif %}">{{ row.status }}</span></td>
+          <td>{% if row.booking %}{{ row.booking.user.username }} · {{ row.booking.guests }} guest{{ row.booking.guests|pluralize }}{% endif %}</td>
+          <td>{% if row.booking %}
+            <form method="post" action="{% url 'manage_cancel' row.booking.id %}">{% csrf_token %}<button class="manage-cancel" type="submit">Cancel</button></form>
+            {% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">This restaurant has no tables yet. Add some in the admin site.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="manage-card">
+    <h2>All bookings on {{ day|date:"Y-m-d" }}</h2>
+    {% if day_bookings %}
+    <table class="manage-table">
+      <thead>
+        <tr><th>Time</th><th>Table</th><th>Guest</th><th>Party</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for booking in day_bookings %}
+        <tr>
+          <td>{{ booking.time|time:"H:i" }}</td>
+          <td>{{ booking.table.name }}</td>
+          <td>{{ booking.user.username }}</td>
+          <td>{{ booking.guests }}</td>
+          <td>{{ booking.get_status_display }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="manage-muted">No bookings on this date.</p>
+    {% endif %}
+  </section>
+</main>
+{% endblock %}

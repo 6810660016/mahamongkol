@@ -1,0 +1,26 @@
+.manage-page { background: var(--cream); color: var(--ink); }
+.manage-shell { max-width: 960px; margin: 0 auto; padding: 40px 20px 72px; }
+.manage-header h1 { font-family: "Merriweather", serif; font-size: clamp(2rem, 5vw, 3rem); margin: 6px 0 8px; color: var(--green); }
+.manage-header h1 span { color: var(--gold); }
+.manage-back { display: inline-block; margin-bottom: 18px; color: var(--green); text-decoration: none; font-weight: 600; }
+.manage-lead, .manage-muted { color: var(--muted); margin: 0 0 24px; }
+
+.manage-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.manage-list__item { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 22px; }
+.manage-list__item small { display: block; color: var(--muted); margin-top: 4px; }
+.manage-empty { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; }
+
+.manage-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 24px; }
+.manage-filter input, .manage-filter select { padding: 10px 12px; border: 1px solid var(--cream-deep); border-radius: 12px; background: var(--white); font: inherit; }
+
+.manage-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 22px; margin-bottom: 24px; overflow-x: auto; }
+.manage-card h2 { margin: 0 0 14px; font-size: 1.15rem; }
+.manage-table { width: 100%; border-collapse: collapse; min-width: 520px; }
+.manage-table th, .manage-table td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--cream-deep); }
+.manage-table th { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+.manage-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: .85rem; font-weight: 600; }
+.manage-badge--booked { background: #f7e0dc; color: #8c2a1c; }
+.manage-badge--available { background: #dcefe6; color: var(--green); }
+.manage-cancel { border: 1px solid #c9b88f; background: transparent; color: #8c2a1c; border-radius: 999px; padding: 6px 14px; font: inherit; cursor: pointer; }
+.manage-cancel:hover { background: #f7e0dc; }
