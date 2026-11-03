@@ -52,7 +52,7 @@
                 class="place-card__heart" aria-hidden="true">♡</span></div>
             <div class="place-card__body">
               <h3>{{ place.name }}</h3>
-              <p>{{ place.type }}</p><span class="place-card__rating">★ 4.8</span>
+                            <p>{{ place.type }}</p>{% if place.reviews %}<span class="place-card__rating">★ {{ place.rating }}</span>{% endif %}
             </div>
           </a>
         </article>

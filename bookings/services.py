@@ -4,6 +4,8 @@ from datetime import time
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from restaurants.models import Restaurant
+
 from .models import Booking
 
 SLOTS = ("11:30", "13:00", "17:30", "19:00", "20:30")
@@ -45,6 +47,9 @@ def booked_table_ids(restaurant, day, slot):
 
 def create_booking(user, restaurant, day, slot_value, guests):
     """Reserve the smallest free table that fits the party."""
+    if restaurant.status != Restaurant.Status.PUBLISHED or not restaurant.is_open:
+        raise BookingError("ร้านนี้ปิดรับจองชั่วคราว")
+    
     slot = parse_slot(slot_value)
     if slot is None or day < date_cls.today() or not 1 <= guests <= MAX_GUESTS:
         raise BookingError(INVALID_INPUT_MESSAGE)

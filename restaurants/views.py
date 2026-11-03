@@ -9,7 +9,7 @@ from .models import Restaurant
 @customer_ui_required
 def restaurants_view(request):
     query = request.GET.get("q", "").strip()
-    restaurants = Restaurant.objects.all()
+    restaurants = Restaurant.objects.published()      # เปลี่ยนจาก .all()
     if query:
         restaurants = restaurants.filter(
             Q(name__icontains=query)
@@ -25,7 +25,7 @@ def restaurants_view(request):
 
 @customer_ui_required
 def restaurant_detail_view(request, slug):
-    restaurant = get_object_or_404(Restaurant, slug=slug)
+    restaurant = get_object_or_404(Restaurant.objects.published(), slug=slug)   # เปลี่ยนจาก Restaurant
     return render(
         request, "restaurants/restaurant_detail.html", {"restaurant": restaurant}
     )
