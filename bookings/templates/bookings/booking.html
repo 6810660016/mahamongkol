@@ -15,6 +15,9 @@
       <h1>Book your<br><span>table.</span></h1>
       <p class="booking-lead">A lovely experience at {{ restaurant.name }} is just a few details away.</p>
       {% if error %}<p class="booking-error" role="alert">{{ error }}</p>{% endif %}
+      {% if not restaurant.is_open %}
+      <p class="booking-error" role="alert">ร้านนี้ปิดรับจองชั่วคราว</p>
+      {% else %}
       <form method="post" class="booking-form">
         {% csrf_token %}
         <label for="booking-date">Date</label>
@@ -48,6 +51,7 @@
         <button class="button button--primary button--full" type="submit">Confirm reservation <span>→</span></button>
         <p class="booking-form__fineprint">By continuing, you agree to the restaurant’s reservation policy.</p>
       </form>
+      {% endif %}
     </div>
     <aside class="booking-summary">
       <div class="booking-summary__image" style="background-image:url('{{ restaurant.image }}')"></div>

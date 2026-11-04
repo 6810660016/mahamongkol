@@ -1,8 +1,21 @@
 from django.conf import settings
 from django.db import models
 
+class RestaurantQuerySet(models.QuerySet):
+    def published(self):
+        return self.filter(status=Restaurant.Status.PUBLISHED)
 
 class Restaurant(models.Model):
+    class Category(models.TextChoices):
+        RESTAURANT = "Restaurant", "Restaurant"
+        CAFE = "Café", "Café"
+        WELLNESS = "Wellness", "Wellness"
+        OTHER = "Other", "Other"
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        PUBLISHED = "published", "Published"
+        
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -13,6 +26,10 @@ class Restaurant(models.Model):
     slug = models.SlugField(unique=True)
     name = models.CharField(max_length=120)
     type = models.CharField(max_length=120, blank=True)
+    category = models.CharField(max_length=20, choices=Category.choices, default=Category.RESTAURANT)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PUBLISHED)
+    is_open = models.BooleanField(default=True)
+    extra_details = models.JSONField(default=list, blank=True)
     rating = models.DecimalField(max_digits=2, decimal_places=1, default=0)
     reviews = models.PositiveIntegerField(default=0)
     price = models.CharField(max_length=60, blank=True)
@@ -20,6 +37,7 @@ class Restaurant(models.Model):
     hours = models.CharField(max_length=100, blank=True)
     image = models.URLField(blank=True)
     description = models.TextField(blank=True)
+    objects = RestaurantQuerySet.as_manager()
 
     class Meta:
         ordering = ("id",)

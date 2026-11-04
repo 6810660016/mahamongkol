@@ -2,7 +2,7 @@
 .detail-breadcrumb { display: flex; gap: 10px; width: min(1240px, calc(100% - 96px)); margin: 27px auto 20px; color: var(--muted); font-size: .76rem; }
 .detail-breadcrumb a { color: var(--green); font-weight: 600; }
 .detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) 345px; align-items: start; gap: 48px; width: min(1240px, calc(100% - 96px)); margin: 0 auto; }
-.detail-gallery { position: relative; display: grid; grid-template-columns: 1.4fr .8fr; gap: 10px; height: 380px; overflow: hidden; border-radius: 5px; }
+.detail-gallery { position: relative; display: grid; grid-template-columns: 1fr; gap: 10px; height: 380px; overflow: hidden; border-radius: 5px; }
 .detail-gallery__main, .detail-gallery__side > div { background-position: center; background-size: cover; }
 .detail-gallery__side { display: grid; grid-template-rows: 1fr 1fr; gap: 10px; min-height: 0; }
 .detail-gallery::after { position: absolute; inset: 45% 0 0; content: ''; pointer-events: none; background: linear-gradient(0deg, rgba(0,0,0,.5), transparent); }
