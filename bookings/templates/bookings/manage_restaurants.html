@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Manage bookings | Mahamongkol{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'bookings/css/manage.css' %}?v=20261102">{% endblock %}
+{% block body_class %}manage-page{% endblock %}
+{% block content %}
+<main class="manage-shell">
+  <header class="manage-header">
+    <a class="manage-back" href="{% if request.user.is_superuser or request.user.is_admin_role %}{% url 'owner_applications_admin' %}{% else %}{% url 'owner_dashboard' %}{% endif %}">← Back to workspace</a>
+    <p class="eyebrow">BOOKING MANAGEMENT</p>
+    <h1>Your <span>restaurants.</span></h1>
+    <p class="manage-lead">Choose a restaurant to see which tables are booked.</p>
+  </header>
+  {% if restaurants %}
+  <ul class="manage-list">
+    {% for restaurant in restaurants %}
+    <li class="manage-list__item">
+      <div><strong>{{ restaurant.name }}</strong><small>{{ restaurant.address }}</small></div>
+      <a class="button button--primary" href="{% url 'manage_bookings' restaurant.slug %}">View bookings <span>→</span></a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="manage-empty">
+    <h2>No restaurants yet</h2>
+    <p>No restaurant is linked to your account. Ask an administrator to assign your restaurant to you.</p>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

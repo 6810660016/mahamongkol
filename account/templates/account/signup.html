@@ -1,7 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Create account | Mahamongkol{% endblock %}
-{% block page_css %}<link rel="stylesheet" href="{% static 'account/css/signup.css' %}?v=20261028-1">{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'account/css/password_toggle.css' %}">
+<link rel="stylesheet" href="{% static 'account/css/signup.css' %}?v=20261028-1">
+{% endblock %}
+{% block page_js %}<script src="{% static 'account/js/password_toggle.js' %}"></script>{% endblock %}
 {% block body_class %}register-page{% endblock %}
 {% block content %}
 <main class="register-shell">
@@ -61,19 +65,33 @@
 
           <div class="register-field register-field--wide">
             <label for="{{ form.password1.id_for_label }}">Password</label>
-            <input class="register-input" type="password" id="{{ form.password1.id_for_label }}" name="password1"
-              autocomplete="new-password" placeholder="Create a password" required
-              {% if form.password1.errors %}aria-invalid="true" aria-describedby="register-password-error"{% endif %}>
+            <div class="password-field">
+              <input class="register-input" type="password" id="{{ form.password1.id_for_label }}" name="password1"
+                autocomplete="new-password" placeholder="Create a password" required
+                {% if form.password1.errors %}aria-invalid="true" aria-describedby="register-password-error"{% endif %}>
+              <button type="button" class="password-toggle" data-password-toggle
+                aria-label="Show password" aria-pressed="false">
+                <i class="bi bi-eye icon-eye" aria-hidden="true"></i>
+                <i class="bi bi-eye-slash icon-eye-off" aria-hidden="true"></i>
+              </button>
+            </div>
             <small class="register-field__hint">Use at least 8 characters and avoid common or all-numeric passwords.</small>
             {% if form.password1.errors %}<div class="register-field__error" id="register-password-error" role="alert">{% for error in form.password1.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
           </div>
 
           <div class="register-field register-field--wide">
             <label for="{{ form.password2.id_for_label }}">Confirm password</label>
-            <input class="register-input" type="password" id="{{ form.password2.id_for_label }}" name="password2"
-              autocomplete="new-password" placeholder="Enter your password again" required
-              {% if form.password2.errors %}aria-invalid="true" aria-describedby="register-confirm-error"{% endif %}>
-            {% if form.password2.errors %}<div class="register-field__error" id="register-confirm-error" role="alert">{% for error in form.password2.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+            <div class="password-field">
+              <input class="register-input" type="password" id="{{ form.password2.id_for_label }}" name="password2"
+                autocomplete="new-password" placeholder="Enter your password again" required
+                {% if form.password2.errors %}aria-invalid="true" aria-describedby="register-confirm-error"{% endif %}>
+                {% if form.password2.errors %}<div class="register-field__error" id="register-confirm-error" role="alert">{% for error in form.password2.errors %}<span>{{ error }}</span>{% endfor %}</div>{% endif %}
+              <button type="button" class="password-toggle" data-password-toggle
+                aria-label="Show password" aria-pressed="false">
+                <i class="bi bi-eye icon-eye" aria-hidden="true"></i>
+                <i class="bi bi-eye-slash icon-eye-off" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
         </div>
 

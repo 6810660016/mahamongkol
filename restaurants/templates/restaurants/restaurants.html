@@ -37,7 +37,7 @@
           <div>
             <h3><a href="{% url 'restaurant_detail' place.slug %}">{{ place.name }}</a></h3>
             <p>{{ place.price }}</p>
-          </div><span class="restaurant-card__rating">★ {{ place.rating }}</span>
+            </div>{% if place.reviews %}<span class="restaurant-card__rating">★ {{ place.rating }}</span>{% endif %}
           <p class="restaurant-card__address">⌖ {{ place.address }}</p><a class="restaurant-card__link"
             href="{% url 'restaurant_detail' place.slug %}">Discover <span>→</span></a>
         </div>

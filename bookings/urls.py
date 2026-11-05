@@ -10,4 +10,11 @@ urlpatterns = [
         views.cancel_booking_view,
         name="cancel_booking",
     ),
+    path("manage/", views.manage_restaurants_view, name="manage_restaurants"),
+    path(
+        "manage/cancel/<int:booking_id>/",
+        views.manage_cancel_view,
+        name="manage_cancel",
+    ),
+    path("manage/<slug:slug>/", views.manage_bookings_view, name="manage_bookings"),
 ]

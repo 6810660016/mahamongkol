@@ -18,8 +18,9 @@ class OwnerPreviewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "dashboard/owner_dashboard.html")
-        self.assertContains(response, "Prototype workspace")
-        self.assertContains(response, "Publish approval rules are still to be confirmed")
+        self.assertContains(response, "My stores")
+        self.assertContains(response, 'id="stores-data"')
+        self.assertNotContains(response, "Prototype workspace")
         self.assertContains(response, "Sign out")
         self.assertContains(response, "Switch to customer")
         self.assertContains(response, reverse("owner_queue"))

@@ -1,6 +1,14 @@
-from django.shortcuts import redirect, render
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.views.decorators.http import require_POST
+
 from account.decorators import customer_ui_required, owner_ui_required
 from account.ui import get_landing_url_name
+
+from restaurants import services
+from restaurants.forms import RestaurantForm
+from restaurants.models import Restaurant
 
 
 @customer_ui_required
@@ -11,26 +19,19 @@ def home_view(request):
         ("spa", "Wellness", "Relax and recharge with ease"),
         ("service", "More services", "Book everything in one place"),
     ]
+
     favourites = [
         {
-            "slug": "salvia",
-            "name": "Salvia",
-            "type": "Restaurant · Italian cuisine",
-            "image": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=900&q=85",
-        },
-        {
-            "slug": "garden-table",
-            "name": "The Garden Table",
-            "type": "Restaurant · All-day dining",
-            "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=900&q=85",
-        },
-        {
-            "slug": "mellow-coffee",
-            "name": "Mellow Coffee",
-            "type": "Café · Coffee and pastry",
-            "image": "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=900&q=85",
-        },
+            "slug": r.slug,
+            "name": r.name,
+            "type": f"{r.category} · {r.type}" if r.type else r.category,
+            "image": r.image,
+            "rating": r.rating,
+            "reviews": r.reviews,
+        }
+        for r in Restaurant.objects.published().order_by("-rating", "id")[:3]
     ]
+
     return render(
         request,
         "dashboard/home.html",
@@ -40,16 +41,53 @@ def home_view(request):
         },
     )
 
+
 def welcome_view(request):
     if request.user.is_authenticated:
         return redirect(get_landing_url_name(request))
-    return render(request, 'dashboard/welcome.html')
+
+    return render(request, "dashboard/welcome.html")
 
 
 @owner_ui_required
 def owner_dashboard_view(request):
-    """Owner portal UI prototype; all store data is client-side demo data."""
-    return render(request, "dashboard/owner_dashboard.html")
+    stores_data = [
+        {
+            "id": store.slug,
+            "slug": store.slug,
+            "name": store.name,
+            "category": store.category,
+            "price": store.price,
+            "address": store.address,
+            "hours": store.hours,
+            "image": store.image,
+            "description": store.description,
+            "status": store.status,
+            "isOpen": store.is_open,
+            "extras": store.extra_details,
+            "urls": {
+                "edit": reverse(
+                    "owner_store_update",
+                    args=[store.slug],
+                ),
+                "status": reverse(
+                    "owner_store_status",
+                    args=[store.slug],
+                ),
+                "delete": reverse(
+                    "owner_store_delete",
+                    args=[store.slug],
+                ),
+            },
+        }
+        for store in request.user.restaurants.all()
+    ]
+
+    return render(
+        request,
+        "dashboard/owner_dashboard.html",
+        {"stores_data": stores_data},
+    )
 
 
 @owner_ui_required
@@ -69,5 +107,123 @@ def owner_bookings_view(request):
 
 @owner_ui_required
 def owner_queue_view(request):
-    """Queue management mockup, with data scoped to the current browser page."""
+    """Queue management mockup; data stays in the current browser page."""
     return render(request, "dashboard/owner_queue.html")
+
+
+def _form_error_message(form):
+    """รวมข้อความ error ของ form เป็นบรรทัดเดียวสำหรับ messages"""
+    parts = []
+
+    for field, errors in form.errors.items():
+        if field == "__all__":
+            label = "ข้อมูล"
+        else:
+            label = form.fields[field].label or field
+
+        parts.append(f"{label}: {' '.join(errors)}")
+
+    return "กรอกข้อมูลไม่ถูกต้อง · " + " · ".join(parts)
+
+
+def _get_store(request, slug):
+    return get_object_or_404(
+        services.managed_restaurants(request.user),
+        slug=slug,
+    )
+
+
+@owner_ui_required
+@require_POST
+def store_create(request):
+    form = RestaurantForm(request.POST)
+
+    if not form.is_valid():
+        messages.error(request, _form_error_message(form))
+        return redirect("owner_dashboard")
+
+    cd = form.cleaned_data
+
+    try:
+        restaurant = services.create_restaurant(
+            request.user,
+            cd,
+            extra_details=cd["extras"],
+            table_count=cd["table_count"],
+            seats=cd["seats_per_table"],
+        )
+    except services.RestaurantError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            f"สร้างร้าน {restaurant.name} เป็นฉบับร่างแล้ว",
+        )
+
+    return redirect("owner_dashboard")
+
+
+@owner_ui_required
+@require_POST
+def store_update(request, slug):
+    restaurant = _get_store(request, slug)
+    form = RestaurantForm(request.POST)
+
+    if not form.is_valid():
+        messages.error(request, _form_error_message(form))
+        return redirect("owner_dashboard")
+
+    cd = form.cleaned_data
+
+    try:
+        services.update_restaurant(
+            restaurant,
+            request.user,
+            cd,
+            extra_details=cd["extras"],
+        )
+    except services.RestaurantError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f"บันทึกร้าน {restaurant.name} แล้ว")
+
+    return redirect("owner_dashboard")
+
+
+@owner_ui_required
+@require_POST
+def store_status(request, slug):
+    restaurant = _get_store(request, slug)
+    is_open = request.POST.get("is_open")
+
+    try:
+        services.set_status(
+            restaurant,
+            request.user,
+            status=request.POST.get("status") or None,
+            is_open=None if is_open is None else is_open == "1",
+        )
+    except services.RestaurantError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            f"อัปเดตสถานะร้าน {restaurant.name} แล้ว",
+        )
+
+    return redirect("owner_dashboard")
+
+
+@owner_ui_required
+@require_POST
+def store_delete(request, slug):
+    restaurant = _get_store(request, slug)
+
+    try:
+        services.delete_restaurant(restaurant, request.user)
+    except services.RestaurantError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "ลบร้านแล้ว")
+
+    return redirect("owner_dashboard")
