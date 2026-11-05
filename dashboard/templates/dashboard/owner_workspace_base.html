@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{% block owner_title %}Owner Studio{% endblock %} | Mahamongkol{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'dashboard/css/owner_workspace.css' %}?v=20261105-1">{% block owner_css %}{% endblock %}<link rel="stylesheet" href="{% static 'dashboard/css/owner_navigation.css' %}?v=20261105-1">{% endblock %}
+{% block page_js %}{% block owner_js %}{% endblock %}{% endblock %}
+{% block body_class %}workspace-page{% endblock %}
+{% block content %}
+<main class="workspace-shell">
+  {% block owner_sidebar %}{% endblock %}
+  <div class="workspace-main">{% block owner_topbar %}{% endblock %}<div class="workspace-content">{% block owner_content %}{% endblock %}<footer class="workspace-footer"><span>MAHAMONGKOL OWNER STUDIO</span><span>Mockup · Example data only</span></footer></div></div>
+</main>
+{% endblock %}

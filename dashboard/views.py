@@ -50,3 +50,24 @@ def welcome_view(request):
 def owner_dashboard_view(request):
     """Owner portal UI prototype; all store data is client-side demo data."""
     return render(request, "dashboard/owner_dashboard.html")
+
+
+@owner_ui_required
+def owner_overview_view(request):
+    return render(request, "dashboard/owner_overview.html")
+
+
+@owner_ui_required
+def owner_store_details_view(request):
+    return render(request, "dashboard/owner_store_details.html")
+
+
+@owner_ui_required
+def owner_bookings_view(request):
+    return render(request, "dashboard/owner_bookings.html")
+
+
+@owner_ui_required
+def owner_queue_view(request):
+    """Queue management mockup, with data scoped to the current browser page."""
+    return render(request, "dashboard/owner_queue.html")

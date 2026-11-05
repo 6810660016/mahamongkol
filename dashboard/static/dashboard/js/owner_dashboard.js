@@ -82,7 +82,6 @@
     document.querySelector("[data-stat-total]").textContent = stores.length;
     document.querySelector("[data-stat-published]").textContent = published;
     document.querySelector("[data-stat-drafts]").textContent = drafts;
-    document.querySelector("[data-nav-store-count]").textContent = stores.length;
     document.querySelector("[data-heading-store-count]").textContent = stores.length;
   }
 
@@ -158,4 +157,5 @@
   });
 
   render();
+  if (new URLSearchParams(window.location.search).get("add_store") === "1") openEditor();
 })();
