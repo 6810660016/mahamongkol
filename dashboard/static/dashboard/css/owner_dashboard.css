@@ -1,7 +1,7 @@
 /* Owner preview UI: intentionally isolated from customer-page styles. */
 .owner-app button:focus-visible { outline:2px solid #c99e45;outline-offset:3px; }
 @media(max-width:760px) { .owner-app .owner-sidebar__bottom { display:flex;align-items:center;gap:12px;margin-top:12px; }.owner-app .owner-sidebar__bottom .owner-preview-profile { display:none; }.owner-app .owner-ui-switch { margin:0; }.owner-app .owner-signout { margin-left:auto;padding:0;border:0; } }
-.owner-preview-page { background: #f6f2e9; color: #20352d; }
+.owner-preview-page { background: #f8f7f4; color: #20352d; }
 .owner-app { --owner-green:#164b3b; --owner-deep:#10372c; --owner-gold:#c99e45; --owner-muted:#78817a; --owner-line:#e9e5db; min-height:100vh; display:grid; grid-template-columns:258px minmax(0,1fr); font-family:inherit; }
 .owner-sidebar { background:#fffefa; border-right:1px solid var(--owner-line); padding:28px 18px 20px; display:flex; flex-direction:column; min-height:100vh; position:sticky; top:0; height:100vh; }
 .owner-brand { display:flex; align-items:center; gap:11px; color:#20352d; text-decoration:none; font-size:17px; font-weight:750; letter-spacing:-.3px; padding:3px 9px 42px; }
@@ -13,6 +13,7 @@
 .owner-side-nav a,.owner-side-nav button { min-height:44px; display:flex; align-items:center; gap:12px; border:0; border-radius:10px; padding:0 12px; background:transparent; color:#68736c; text-decoration:none; text-align:left; font:600 13px inherit; cursor:pointer; }
 .owner-side-nav a:hover,.owner-side-nav button:hover { background:#f4f5ef; color:var(--owner-green); }
 .owner-side-nav a.is-active { background:#eaf0eb; color:var(--owner-green); }
+.owner-sidebar { background:#063d2e;border-right-color:#063d2e;color:#fff; }.owner-brand { color:#fff; }.owner-brand small,.owner-sidebar__label { color:#adc4b5; }.owner-side-nav a,.owner-side-nav button { color:#c3d3c5; }.owner-side-nav a:hover,.owner-side-nav button:hover,.owner-side-nav a.is-active { background:#ffffff20;color:#fff; }.owner-side-nav__count { background:#ffffff20;color:#e3eee5; }.owner-ui-switch button { border-color:#ffffff35;background:#ffffff0d;color:#e7eee4; }.owner-ui-switch button:hover { background:#ffffff20; }.owner-preview-profile,.owner-signout { border-color:#ffffff22; }.owner-preview-profile__avatar { background:#ffffff20;color:#e6d096; }.owner-preview-profile small,.owner-signout button { color:#b9cbbd; }.owner-signout button:hover { background:#ffffff16; }
 .owner-side-nav a>span:first-child,.owner-side-nav button>span:first-child { width:17px; font-size:17px; text-align:center; }
 .owner-side-nav__count { margin-left:auto; border-radius:99px; background:#fff; padding:3px 8px; color:#718078; font-size:11px; }
 .owner-sidebar__bottom { margin-top:auto; }

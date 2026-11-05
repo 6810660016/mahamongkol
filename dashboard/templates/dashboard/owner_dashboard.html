@@ -1,36 +1,20 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Owner Studio | Mahamongkol{% endblock %}
-{% block page_css %}<link rel="stylesheet" href="{% static 'dashboard/css/owner_dashboard.css' %}?v=20261028-1">{% endblock %}
-{% block page_js %}<script src="{% static 'dashboard/js/owner_dashboard.js' %}?v=20261104-1" defer></script>{% endblock %}
+{% block page_css %}
+<link rel="stylesheet" href="{% static 'dashboard/css/owner_dashboard.css' %}?v=20261105-3">
+<link rel="stylesheet" href="{% static 'dashboard/css/owner_navigation.css' %}?v=20261105-1">
+{% endblock %}
+{% block page_js %}
+<script src="{% static 'dashboard/js/owner_dashboard.js' %}?v=20261105-1" defer></script>
+{% endblock %}
 {% block body_class %}owner-preview-page{% endblock %}
 {% block content %}
 <main class="owner-app">
-  <aside class="owner-sidebar" aria-label="Owner workspace navigation">
-    <a class="owner-brand" href="{% url 'owner_dashboard' %}">
-      <span class="owner-brand__mark">M</span><span>mahamongkol<small>OWNER STUDIO</small></span>
-    </a>
-
-    <p class="owner-sidebar__label">WORKSPACE</p>
-    <nav class="owner-side-nav" aria-label="Workspace">
-      <a class="is-active" href="#overview"><span aria-hidden="true">▦</span> Overview</a>
-      <a href="#my-stores"><span aria-hidden="true">⌂</span> My stores <span class="owner-side-nav__count" data-nav-store-count>{{ stores_data|length }}</span></a>
-      <a href="{% url 'manage_restaurants' %}"><span aria-hidden="true">▣</span> Bookings</a>
-      <button type="button" data-open-store><span aria-hidden="true">＋</span> Add a store</button>
-    </nav>
-
-    <div class="owner-sidebar__bottom">
-      <form class="owner-ui-switch" method="post" action="{% url 'switch_ui' %}">{% csrf_token %}<input type="hidden" name="interface" value="customer"><button type="submit"><span aria-hidden="true">⇄</span> Switch to customer</button></form>
-      <div class="owner-preview-profile"><span class="owner-preview-profile__avatar">{{ request.user.username|first|upper }}</span><span><strong>{{ request.user.username }}</strong><small>Store owner</small></span><span class="owner-preview-profile__dots" aria-hidden="true">···</span></div>
-      <form class="owner-signout" method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit"><span aria-hidden="true">↪</span> Sign out</button></form>
-    </div>
-  </aside>
+  {% include 'dashboard/partials/owner_sidebar.html' with active_page='stores' %}
 
   <div class="owner-main">
-    <header class="owner-topbar">
-      <div class="owner-breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><strong>Overview</strong></div>
-      <div class="owner-topbar__right"><span class="owner-topbar__avatar" aria-label="Store owner">{{ request.user.username|first|upper }}</span></div>
-    </header>
+    {% include 'dashboard/partials/owner_topbar.html' with page_title='My stores' %}
 
     <section class="owner-content" id="overview">
       <div class="owner-hero">

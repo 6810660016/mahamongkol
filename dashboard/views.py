@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.shortcuts import get_object_or_404,redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
@@ -10,6 +10,7 @@ from restaurants import services
 from restaurants.forms import RestaurantForm
 from restaurants.models import Restaurant
 
+
 @customer_ui_required
 def home_view(request):
     categories = [
@@ -18,6 +19,7 @@ def home_view(request):
         ("spa", "Wellness", "Relax and recharge with ease"),
         ("service", "More services", "Book everything in one place"),
     ]
+
     favourites = [
         {
             "slug": r.slug,
@@ -29,62 +31,119 @@ def home_view(request):
         }
         for r in Restaurant.objects.published().order_by("-rating", "id")[:3]
     ]
-    return render(request, "dashboard/home.html", {"categories": categories, "favourites": favourites})
+
+    return render(
+        request,
+        "dashboard/home.html",
+        {
+            "categories": categories,
+            "favourites": favourites,
+        },
+    )
+
 
 def welcome_view(request):
     if request.user.is_authenticated:
         return redirect(get_landing_url_name(request))
-    return render(request, 'dashboard/welcome.html')
+
+    return render(request, "dashboard/welcome.html")
 
 
 @owner_ui_required
 def owner_dashboard_view(request):
     stores_data = [
         {
-            "id": s.slug,  # JS เดิมใช้ store.id อยู่ จึงใส่ slug ลงช่องนี้
-            "slug": s.slug,
-            "name": s.name,
-            "category": s.category,
-            "price": s.price,
-            "address": s.address,
-            "hours": s.hours,
-            "image": s.image,
-            "description": s.description,
-            "status": s.status,
-            "isOpen": s.is_open,
-            "extras": s.extra_details,
+            "id": store.slug,
+            "slug": store.slug,
+            "name": store.name,
+            "category": store.category,
+            "price": store.price,
+            "address": store.address,
+            "hours": store.hours,
+            "image": store.image,
+            "description": store.description,
+            "status": store.status,
+            "isOpen": store.is_open,
+            "extras": store.extra_details,
             "urls": {
-                "edit": reverse("owner_store_update", args=[s.slug]),
-                "status": reverse("owner_store_status", args=[s.slug]),
-                "delete": reverse("owner_store_delete", args=[s.slug]),
+                "edit": reverse(
+                    "owner_store_update",
+                    args=[store.slug],
+                ),
+                "status": reverse(
+                    "owner_store_status",
+                    args=[store.slug],
+                ),
+                "delete": reverse(
+                    "owner_store_delete",
+                    args=[store.slug],
+                ),
             },
         }
-        for s in request.user.restaurants.all()
+        for store in request.user.restaurants.all()
     ]
-    return render(request, "dashboard/owner_dashboard.html", {"stores_data": stores_data})
+
+    return render(
+        request,
+        "dashboard/owner_dashboard.html",
+        {"stores_data": stores_data},
+    )
+
+
+@owner_ui_required
+def owner_overview_view(request):
+    return render(request, "dashboard/owner_overview.html")
+
+
+@owner_ui_required
+def owner_store_details_view(request):
+    return render(request, "dashboard/owner_store_details.html")
+
+
+@owner_ui_required
+def owner_bookings_view(request):
+    return render(request, "dashboard/owner_bookings.html")
+
+
+@owner_ui_required
+def owner_queue_view(request):
+    """Queue management mockup; data stays in the current browser page."""
+    return render(request, "dashboard/owner_queue.html")
+
 
 def _form_error_message(form):
     """รวมข้อความ error ของ form เป็นบรรทัดเดียวสำหรับ messages"""
     parts = []
+
     for field, errors in form.errors.items():
-        label = "ข้อมูล" if field == "__all__" else form.fields[field].label or field
+        if field == "__all__":
+            label = "ข้อมูล"
+        else:
+            label = form.fields[field].label or field
+
         parts.append(f"{label}: {' '.join(errors)}")
+
     return "กรอกข้อมูลไม่ถูกต้อง · " + " · ".join(parts)
 
 
 def _get_store(request, slug):
-    return get_object_or_404(services.managed_restaurants(request.user), slug=slug)
+    return get_object_or_404(
+        services.managed_restaurants(request.user),
+        slug=slug,
+    )
 
 
 @owner_ui_required
 @require_POST
 def store_create(request):
     form = RestaurantForm(request.POST)
+
     if not form.is_valid():
         messages.error(request, _form_error_message(form))
         return redirect("owner_dashboard")
 
     cd = form.cleaned_data
+
     try:
         restaurant = services.create_restaurant(
             request.user,
@@ -96,7 +155,11 @@ def store_create(request):
     except services.RestaurantError as exc:
         messages.error(request, str(exc))
     else:
-        messages.success(request, f"สร้างร้าน {restaurant.name} เป็นฉบับร่างแล้ว")
+        messages.success(
+            request,
+            f"สร้างร้าน {restaurant.name} เป็นฉบับร่างแล้ว",
+        )
+
     return redirect("owner_dashboard")
 
 
@@ -105,19 +168,25 @@ def store_create(request):
 def store_update(request, slug):
     restaurant = _get_store(request, slug)
     form = RestaurantForm(request.POST)
+
     if not form.is_valid():
         messages.error(request, _form_error_message(form))
         return redirect("owner_dashboard")
 
     cd = form.cleaned_data
+
     try:
         services.update_restaurant(
-            restaurant, request.user, cd, extra_details=cd["extras"]
+            restaurant,
+            request.user,
+            cd,
+            extra_details=cd["extras"],
         )
     except services.RestaurantError as exc:
         messages.error(request, str(exc))
     else:
         messages.success(request, f"บันทึกร้าน {restaurant.name} แล้ว")
+
     return redirect("owner_dashboard")
 
 
@@ -126,6 +195,7 @@ def store_update(request, slug):
 def store_status(request, slug):
     restaurant = _get_store(request, slug)
     is_open = request.POST.get("is_open")
+
     try:
         services.set_status(
             restaurant,
@@ -136,7 +206,11 @@ def store_status(request, slug):
     except services.RestaurantError as exc:
         messages.error(request, str(exc))
     else:
-        messages.success(request, f"อัปเดตสถานะร้าน {restaurant.name} แล้ว")
+        messages.success(
+            request,
+            f"อัปเดตสถานะร้าน {restaurant.name} แล้ว",
+        )
+
     return redirect("owner_dashboard")
 
 
@@ -144,10 +218,12 @@ def store_status(request, slug):
 @require_POST
 def store_delete(request, slug):
     restaurant = _get_store(request, slug)
+
     try:
         services.delete_restaurant(restaurant, request.user)
     except services.RestaurantError as exc:
         messages.error(request, str(exc))
     else:
         messages.success(request, "ลบร้านแล้ว")
+
     return redirect("owner_dashboard")

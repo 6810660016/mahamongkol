@@ -95,7 +95,6 @@
     document.querySelector("[data-stat-total]").textContent = stores.length;
     document.querySelector("[data-stat-published]").textContent = published;
     document.querySelector("[data-stat-drafts]").textContent = drafts;
-    document.querySelector("[data-nav-store-count]").textContent = stores.length;
     document.querySelector("[data-heading-store-count]").textContent = stores.length;
   }
 
@@ -149,6 +148,9 @@
   dialog.addEventListener("close", resetForm);
   const flash = [...document.querySelectorAll("[data-flash]")].map((el) => el.textContent.trim());
   if (flash.length) notify(flash.join(" · "));
-
   render();
+
+  if (new URLSearchParams(window.location.search).get("add_store") === "1") {
+    openEditor();
+  }
 })();
