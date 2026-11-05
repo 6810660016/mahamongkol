@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Queue management | Mahamongkol{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'dashboard/css/owner_queue.css' %}?v=20261105-2"><link rel="stylesheet" href="{% static 'dashboard/css/owner_navigation.css' %}?v=20261105-1">{% endblock %}
+{% block page_js %}<script src="{% static 'dashboard/js/owner_queue.js' %}?v=20261105-2" defer></script>{% endblock %}
+{% block body_class %}queue-preview-page{% endblock %}
+{% block content %}
+<main class="queue-app">
+  {% include 'dashboard/partials/owner_sidebar.html' with active_page='queue' %}
+  <div class="queue-main">
+    {% include 'dashboard/partials/owner_topbar.html' with page_title='Queue management' %}
+    <div class="queue-content">
+      <div class="queue-heading"><div><h1>Queue Management</h1><p>Manage your queues and call guests one at a time.</p></div><button class="queue-button queue-button--dark" type="button" data-open-add><span aria-hidden="true">＋</span> Add to queue</button></div>
+      <div class="queue-notice"><span aria-hidden="true">✦</span><p><strong>Queue preview</strong> These are sample queues. Changes reset when you refresh and are not connected to real bookings or walk-ins.</p><span>MOCKUP</span></div>
+      <section class="queue-stats" aria-label="Queue overview">
+        <article class="queue-stat"><span class="queue-stat__icon" aria-hidden="true">♙</span><div><small>Waiting</small><strong data-stat-waiting>0</strong><span>parties in line</span></div></article>
+        <article class="queue-stat queue-stat--active"><span class="queue-stat__icon" aria-hidden="true">◉</span><div><small>Now serving</small><strong data-stat-current>—</strong><span>current queue</span></div></article>
+        <article class="queue-stat"><span class="queue-stat__icon" aria-hidden="true">✓</span><div><small>Completed</small><strong data-stat-completed>0</strong><span>served in preview</span></div></article>
+        <article class="queue-stat"><span class="queue-stat__icon" aria-hidden="true">◷</span><div><small>Average wait</small><strong data-stat-average>0 min</strong><span>waiting parties · sample</span></div></article>
+      </section>
+      <div class="queue-layout">
+        <section class="queue-current" aria-labelledby="current-title">
+          <div class="queue-current__top"><span class="queue-current__badge" data-current-badge>● NOW SERVING</span><h2 id="current-title">Current queue</h2></div>
+          <div class="queue-current__number" data-current-number>—</div><p class="queue-current__guests" data-current-detail>No queue being served</p><p class="queue-current__source" data-current-source>Call the next party when ready</p>
+          <div class="queue-illustration" aria-hidden="true"><span>✦</span><div class="queue-illustration__table"></div><i></i><i></i><i></i><i></i></div>
+          <div class="queue-current__actions"><button class="queue-button queue-button--outline" type="button" data-call-again>↻ &nbsp; Call again</button><button class="queue-button queue-button--dark" type="button" data-complete>✓ &nbsp; Complete</button></div>
+          <button class="queue-button queue-button--pale" type="button" data-skip>⇥ &nbsp; Skip and call next</button>
+          <button class="queue-button queue-button--dark" type="button" data-call-next hidden>Call next <span aria-hidden="true">→</span></button>
+        </section>
+        <section class="queue-list-card" aria-labelledby="waiting-title">
+          <div class="queue-list-heading"><div><p class="eyebrow">UP NEXT</p><h2 id="waiting-title">Waiting queues</h2><p>One shared line for bookings and walk-ins.</p></div><span class="queue-count" data-waiting-count>0 waiting</span></div>
+          <div class="queue-table-wrap"><table class="queue-table"><thead><tr><th>Queue</th><th>Source</th><th>Party</th><th>Waiting</th><th>Status</th></tr></thead><tbody data-waiting-list></tbody></table></div>
+          <div class="queue-empty" data-waiting-empty hidden>No queues waiting right now.</div>
+          <section class="queue-skipped" aria-labelledby="skipped-title"><div class="queue-skipped__heading"><div><h3 id="skipped-title">Skipped queues</h3><p>Recall a skipped queue to serve it after the current party.</p></div><span data-skipped-count data-stat-skipped>0</span></div><div class="queue-skipped__list" data-skipped-list></div><p class="queue-skipped__empty" data-skipped-empty>No skipped queues.</p></section>
+          <div class="queue-controls"><button type="button" data-toggle-pause>Ⅱ &nbsp; Pause new queues</button><button type="button" data-open-add>＋ &nbsp; Add booking or walk-in</button></div>
+        </section>
+      </div>
+      <footer class="queue-footer"><span>MAHAMONGKOL OWNER STUDIO</span><span>Mockup · Example data only</span></footer>
+    </div>
+  </div>
+</main>
+<dialog class="queue-dialog" data-add-dialog aria-labelledby="add-queue-title">
+  <form data-add-form><div class="queue-dialog__heading"><div><p class="eyebrow">NEW QUEUE · PREVIEW</p><h2 id="add-queue-title">Add to the line.</h2><p>Add a sample booking or walk-in to this preview.</p></div><button class="queue-dialog__close" type="button" aria-label="Close" data-close-add>×</button></div>
+    <label>Queue source<select name="source" required><option value="Booking">Booking</option><option value="Walk-in">Walk-in</option></select></label>
+    <label>Guest name <small>Optional</small><input name="name" maxlength="60" placeholder="Guest name"></label>
+    <label>Party size<input name="party" type="number" min="1" max="20" value="2" required></label>
+    <div class="queue-dialog__actions"><button class="queue-button queue-button--outline" type="button" data-close-add>Cancel</button><button class="queue-button queue-button--dark" type="submit">Add sample queue →</button></div>
+  </form>
+</dialog>
+<div class="queue-toast" role="status" aria-live="polite" data-toast></div>
+{% endblock %}
