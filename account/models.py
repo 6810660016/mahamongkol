@@ -18,7 +18,7 @@ class User(AbstractUser):
         default=Role.USER,
     )
 
-    REQUIRED_FIELDS = ("email")
+    REQUIRED_FIELDS = ("email",)
 
     class Meta(AbstractUser.Meta):
         constraints = (
