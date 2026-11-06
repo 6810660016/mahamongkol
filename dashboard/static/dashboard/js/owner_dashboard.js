@@ -150,7 +150,7 @@
   if (flash.length) notify(flash.join(" · "));
   render();
 
-  if (new URLSearchParams(window.location.search).get("add_store") === "1") {
+  if (new URLSearchParams(window.location.search).get("add_store") === "1" && document.querySelector("[data-open-store]")) {
     openEditor();
   }
 })();

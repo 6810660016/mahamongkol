@@ -80,7 +80,7 @@ def owner_dashboard_view(request):
                 ),
             },
         }
-        for store in request.user.restaurants.all()
+        for store in Restaurant.objects.filter(owner=request.user)
     ]
 
     return render(

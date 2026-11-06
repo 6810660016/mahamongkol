@@ -16,12 +16,13 @@ class Restaurant(models.Model):
         DRAFT = "draft", "Draft"
         PUBLISHED = "published", "Published"
         
-    owner = models.ForeignKey(
+    # หนึ่งบัญชีเจ้าของมีได้ 1 ร้าน (ร้านที่ไม่มีเจ้าของ เช่น ร้าน seed เป็น NULL ได้หลายร้าน)
+    owner = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="restaurants",
+        related_name="restaurant",
     )
     slug = models.SlugField(unique=True)
     name = models.CharField(max_length=120)
