@@ -11,7 +11,7 @@
       <button class="home-nav__link" type="submit" aria-label="Switch to Owner Studio"><span class="nav-icon" aria-hidden="true">⇄</span><span class="nav-link-label">Owner Studio</span></button>
     </form>
     {% elif request.user.is_authenticated and not request.user.is_admin_role and not request.user.is_superuser %}
-    <a class="home-nav__link home-nav__owner-entry" href="{% if request.user.owner_application.status == 'pending' %}{% url 'owner_application_status' %}{% else %}{% url 'owner_signup' %}{% endif %}"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-link-label">{% if request.user.owner_application.status == 'pending' %}Application pending{% else %}Become an owner{% endif %}</span></a>
+    <a class="home-nav__link home-nav__owner-entry" href="{% if request.user.owner_application.status == 'pending' or request.user.owner_application.status == 'rejected' %}{% url 'owner_application_status' %}{% else %}{% url 'owner_signup' %}{% endif %}"><span class="nav-icon" aria-hidden="true">⌂</span><span class="nav-link-label">{% if request.user.owner_application.status == 'pending' %}Application pending{% elif request.user.owner_application.status == 'rejected' %}Application update{% else %}Become an owner{% endif %}</span></a>
     {% endif %}
   </div>
 </nav>

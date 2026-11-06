@@ -1,0 +1,30 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("account", "0004_user_account_user_email_ci_unique"),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="ownerapplication",
+            name="rejection_reason",
+            field=models.CharField(blank=True, max_length=300),
+        ),
+        migrations.AlterField(
+            model_name="ownerapplication",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("pending", "Pending review"),
+                    ("approved", "Approved"),
+                    ("rejected", "Rejected"),
+                ],
+                db_index=True,
+                default="pending",
+                max_length=10,
+            ),
+        ),
+    ]

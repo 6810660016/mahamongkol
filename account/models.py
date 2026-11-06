@@ -1,5 +1,5 @@
-from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.functions import Lower
 
@@ -18,17 +18,17 @@ class User(AbstractUser):
         default=Role.USER,
     )
 
-    REQUIRED_FIELDS = ["email"]
+    REQUIRED_FIELDS = ("email",)
 
     class Meta(AbstractUser.Meta):
-        constraints = [
+        constraints = (
             # Login looks users up by email, so emails must be unique ignoring case
             models.UniqueConstraint(
                 Lower("email"),
                 name="account_user_email_ci_unique",
                 violation_error_message="A user with that email already exists.",
             ),
-        ]
+        )
 
     def save(self, *args, **kwargs):
         # Admin and createsuperuser only lowercase the domain part
@@ -59,6 +59,7 @@ class OwnerApplication(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending review"
         APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -69,6 +70,8 @@ class OwnerApplication(models.Model):
     status = models.CharField(
         max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True,
     )
+    # Optional note from the reviewer, shown to the applicant when rejected.
+    rejection_reason = models.CharField(max_length=300, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
     reviewed_by = models.ForeignKey(

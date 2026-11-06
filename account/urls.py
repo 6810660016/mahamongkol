@@ -9,6 +9,7 @@ urlpatterns = [
     path("owner/application/", views.owner_application_status_view, name="owner_application_status"),
     path("staff/owner-applications/", views.owner_applications_admin_view, name="owner_applications_admin"),
     path("staff/owner-applications/<int:application_id>/approve/", views.approve_owner_application_view, name="approve_owner_application"),
+    path("staff/owner-applications/<int:application_id>/reject/", views.reject_owner_application_view, name="reject_owner_application"),
     path("logout/", views.logout_view, name="logout"),
     path("switch-ui/", views.switch_ui_view, name="switch_ui"),
     path("settings/", views.settings_view, name="settings"),

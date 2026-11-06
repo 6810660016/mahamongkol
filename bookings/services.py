@@ -1,6 +1,7 @@
-from datetime import date as date_cls
+import calendar
 from datetime import time
 
+from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -11,10 +12,31 @@ from .models import Booking
 SLOTS = ("11:30", "13:00", "17:30", "19:00", "20:30")
 MAX_GUESTS = 12
 INVALID_INPUT_MESSAGE = "Please choose a valid date, time and party size."
+DEFAULT_ADVANCE_MONTHS = 1
 
 
 class BookingError(Exception):
     """A booking could not be made or changed; the message is safe to show."""
+
+
+def advance_months():
+    """How many months ahead a customer may book."""
+    return getattr(settings, "BOOKING_MAX_ADVANCE_MONTHS", DEFAULT_ADVANCE_MONTHS)
+
+
+def add_months(day, months):
+    """Same day number `months` later, or the month's last day if it is shorter."""
+    month_index = day.month - 1 + months
+    year = day.year + month_index // 12
+    month = month_index % 12 + 1
+    last_day = calendar.monthrange(year, month)[1]
+    return day.replace(year=year, month=month, day=min(day.day, last_day))
+
+
+def booking_window(today=None):
+    """The first and last dates a customer can book, both inclusive."""
+    today = today or timezone.localdate()
+    return today, add_months(today, advance_months())
 
 
 def parse_slot(value):
@@ -51,8 +73,16 @@ def create_booking(user, restaurant, day, slot_value, guests):
         raise BookingError("ร้านนี้ปิดรับจองชั่วคราว")
     
     slot = parse_slot(slot_value)
-    if slot is None or day < date_cls.today() or not 1 <= guests <= MAX_GUESTS:
+    earliest, latest = booking_window()
+    if slot is None or day < earliest or not 1 <= guests <= MAX_GUESTS:
         raise BookingError(INVALID_INPUT_MESSAGE)
+    if day > latest:
+        months = advance_months()
+        raise BookingError(
+            f"Bookings are open up to {latest:%Y-%m-%d} "
+            f"({months} month{'s' if months != 1 else ''} ahead). "
+            "Please choose an earlier date."
+        )
 
     for _ in range(3):
         table = (

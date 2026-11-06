@@ -21,7 +21,8 @@
       <form method="post" class="booking-form">
         {% csrf_token %}
         <label for="booking-date">Date</label>
-        <input id="booking-date" type="date" name="date" required min="{% now 'Y-m-d' %}" value="{{ request.POST.date }}">
+        <input id="booking-date" type="date" name="date" required min="{{ min_date|date:'Y-m-d' }}" max="{{ max_date|date:'Y-m-d' }}" value="{{ request.POST.date }}">
+        <p class="booking-form__fineprint">Bookings are open from today up to {{ max_date|date:"Y-m-d" }}.</p>
         <div class="booking-form__row">
           <div>
             <label for="booking-guests">Guests</label>
