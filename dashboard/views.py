@@ -1,11 +1,17 @@
+from datetime import date
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from account.decorators import customer_ui_required, owner_ui_required
 from account.ui import get_landing_url_name
 
+from bookings import services as booking_services
+from bookings.models import Booking
 from restaurants import services
 from restaurants.forms import RestaurantForm
 from restaurants.models import Restaurant
@@ -100,9 +106,68 @@ def owner_store_details_view(request):
     return render(request, "dashboard/owner_store_details.html")
 
 
+def _booking_code(booking):
+    return f"B{booking.id:03d}"
+
+
+def _bookings_url(day):
+    return f"{reverse('owner_bookings')}?{urlencode({'date': day.isoformat()})}"
+
+
 @owner_ui_required
 def owner_bookings_view(request):
-    return render(request, "dashboard/owner_bookings.html")
+    """Real bookings of the owner's store for one day (?date=YYYY-MM-DD)."""
+    restaurant = Restaurant.objects.filter(owner=request.user).first()
+
+    try:
+        day = date.fromisoformat(request.GET.get("date", ""))
+    except ValueError:
+        day = timezone.localdate()
+
+    bookings_data = []
+    if restaurant is not None:
+        for booking in booking_services.bookings_for_day(restaurant, day):
+            bookings_data.append(
+                {
+                    "id": _booking_code(booking),
+                    "time": f"{booking.time:%H:%M}",
+                    "name": booking.user.get_full_name() or booking.user.username,
+                    "party": booking.guests,
+                    "table": booking.table.name,
+                    "status": booking.status,
+                    "cancelUrl": reverse("owner_booking_cancel", args=[booking.id]),
+                }
+            )
+
+    return render(
+        request,
+        "dashboard/owner_bookings.html",
+        {
+            "restaurant": restaurant,
+            "selected_date": day.isoformat(),
+            "bookings_data": bookings_data,
+        },
+    )
+
+
+@owner_ui_required
+@require_POST
+def owner_booking_cancel_view(request, booking_id):
+    # การจองของร้านอื่น (หรือเจ้าของที่ไม่มีร้าน) จะได้ 404
+    booking = get_object_or_404(
+        Booking.objects.select_related("table__restaurant", "user"),
+        pk=booking_id,
+        table__restaurant__owner=request.user,
+    )
+
+    try:
+        booking_services.cancel_booking(booking, request.user)
+    except booking_services.BookingError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f"ยกเลิกการจอง {_booking_code(booking)} แล้ว")
+
+    return redirect(_bookings_url(booking.date))
 
 
 @owner_ui_required

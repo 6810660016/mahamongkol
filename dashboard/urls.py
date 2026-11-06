@@ -15,6 +15,11 @@ urlpatterns = [
         name="owner_store_details",
     ),
     path("owner/bookings/", views.owner_bookings_view, name="owner_bookings"),
+    path(
+        "owner/bookings/<int:booking_id>/cancel/",
+        views.owner_booking_cancel_view,
+        name="owner_booking_cancel",
+    ),
     path("owner/queue/", views.owner_queue_view, name="owner_queue"),
 
     # Store management

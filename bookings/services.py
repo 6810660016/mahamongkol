@@ -112,3 +112,12 @@ def cancel_booking(booking, by_user):
         booking.cancelled_at = timezone.now()
         booking.save(update_fields=["status", "cancelled_at"])
     return booking
+
+
+def bookings_for_day(restaurant, day):
+    """Every booking of the restaurant on that day, cancelled ones included."""
+    return (
+        Booking.objects.filter(table__restaurant=restaurant, date=day)
+        .select_related("user", "table")
+        .order_by("time", "table__name")
+    )
