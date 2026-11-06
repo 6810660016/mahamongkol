@@ -12,9 +12,7 @@ from .models import Booking
 SLOTS = ("11:30", "13:00", "17:30", "19:00", "20:30")
 MAX_GUESTS = 12
 INVALID_INPUT_MESSAGE = "Please choose a valid date, time and party size."
-# Customers may book from today up to this many months ahead. Override it with
-# BOOKING_MAX_ADVANCE_MONTHS in settings.py.
-DEFAULT_ADVANCE_MONTHS = 1
+DEFAULT_ADVANCE_MONTHS = 2
 
 
 class BookingError(Exception):

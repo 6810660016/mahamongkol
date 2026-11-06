@@ -148,4 +148,4 @@ AUTH_USER_MODEL = "account.User"
 LOGIN_REDIRECT_URL = "home"
 
 # Customers can book from today up to this many months ahead.
-BOOKING_MAX_ADVANCE_MONTHS = 1
+BOOKING_MAX_ADVANCE_MONTHS = 2

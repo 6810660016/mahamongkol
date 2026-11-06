@@ -27,7 +27,7 @@ class OwnerRejectionTests(TestCase):
         self.client.force_login(self.admin)
         return self.client.post(self.reject_url, {"reason": reason})
 
-    # ----- admin side
+    # admin side
 
     def test_admin_rejects_a_pending_application_and_it_is_audited(self):
         response = self.reject("Please add a business address.")
@@ -141,7 +141,7 @@ class OwnerRejectionTests(TestCase):
         self.assertNotContains(page, "<script>alert(1)</script>")
         self.assertContains(page, "&lt;script&gt;")
 
-    # ----- applicant side
+    # applicant side
 
     def test_applicant_sees_the_rejection_and_the_reason(self):
         self.reject("Please add a business address.")

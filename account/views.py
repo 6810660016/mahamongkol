@@ -14,8 +14,9 @@ from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
+from .decorators import admin_ui_required, customer_ui_required
 from .forms import (
     NewPasswordForm,
     OwnerApplicationForm,
@@ -24,11 +25,8 @@ from .forms import (
     PasswordResetOTPForm,
     SignupForm,
 )
-
 from .models import OwnerApplication, User
 from .ui import CUSTOMER_UI, OWNER_UI, get_landing_url_name, set_active_ui
-from .decorators import admin_ui_required, customer_ui_required
-
 
 OTP_LIFETIME_SECONDS = 10 * 60
 OTP_MAX_ATTEMPTS = 5
