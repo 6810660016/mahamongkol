@@ -59,6 +59,7 @@ class OwnerApplication(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending review"
         APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -69,6 +70,8 @@ class OwnerApplication(models.Model):
     status = models.CharField(
         max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True,
     )
+    # Optional note from the reviewer, shown to the applicant when rejected.
+    rejection_reason = models.CharField(max_length=300, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
     reviewed_by = models.ForeignKey(

@@ -214,36 +214,69 @@ def signup_view(request):
 
 @require_http_methods(["GET", "POST"])
 def owner_signup_view(request):
-    """Apply using an existing account, or create one customer account and apply."""
+    """Apply using an existing account, or create one customer account and apply.
+
+    An applicant whose request was rejected can apply again; the same application
+    record is reset to pending with the new details.
+    """
+    rejected_application = None
     if request.user.is_authenticated:
         if request.user.is_admin_role or request.user.is_superuser:
             return redirect("owner_applications_admin")
         if request.user.is_owner_role:
             set_active_ui(request, OWNER_UI)
             return redirect("owner_dashboard")
-        if OwnerApplication.objects.filter(user=request.user).exists():
-            return redirect("owner_application_status")
+        existing = OwnerApplication.objects.filter(user=request.user).first()
+        if existing is not None:
+            if existing.status != OwnerApplication.Status.REJECTED:
+                return redirect("owner_application_status")
+            rejected_application = existing
         form_class = OwnerApplicationForm
     else:
         form_class = OwnerSignupForm
 
-    form = form_class(request.POST if request.method == "POST" else None)
+    data = request.POST if request.method == "POST" else None
+    if rejected_application is not None:
+        form = form_class(data, instance=rejected_application)
+    else:
+        form = form_class(data)
+
     if request.method == "POST" and form.is_valid():
         with transaction.atomic():
-            user = request.user if request.user.is_authenticated else form.save()
-            OwnerApplication.objects.get_or_create(
-                user=user,
-                defaults={
-                    "contact_name": form.cleaned_data["contact_name"],
-                    "business_name": form.cleaned_data["business_name"],
-                },
-            )
+            if rejected_application is not None:
+                application = OwnerApplication.objects.select_for_update().get(
+                    pk=rejected_application.pk
+                )
+                # Only a still-rejected application can be reopened.
+                if application.status == OwnerApplication.Status.REJECTED:
+                    application.contact_name = form.cleaned_data["contact_name"]
+                    application.business_name = form.cleaned_data["business_name"]
+                    application.status = OwnerApplication.Status.PENDING
+                    application.rejection_reason = ""
+                    application.reviewed_by = None
+                    application.reviewed_at = None
+                    application.submitted_at = timezone.now()
+                    application.save()
+                user = request.user
+            else:
+                user = request.user if request.user.is_authenticated else form.save()
+                OwnerApplication.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        "contact_name": form.cleaned_data["contact_name"],
+                        "business_name": form.cleaned_data["business_name"],
+                    },
+                )
         if not request.user.is_authenticated:
             login(request, user)
         set_active_ui(request, CUSTOMER_UI)
         return redirect("owner_application_status")
 
-    return render(request, "account/owner_signup.html", {"form": form})
+    return render(
+        request,
+        "account/owner_signup.html",
+        {"form": form, "rejected_application": rejected_application},
+    )
 
 
 @login_required(login_url="login")
@@ -260,7 +293,7 @@ def owner_application_status_view(request):
 @admin_ui_required
 def owner_applications_admin_view(request):
     status = request.GET.get("status", "pending")
-    if status not in ("pending", "approved", "all"):
+    if status not in ("pending", "approved", "rejected", "all"):
         status = "pending"
     query = request.GET.get("q", "").strip()[:160]
     applications = OwnerApplication.objects.select_related("user", "reviewed_by")
@@ -277,6 +310,7 @@ def owner_applications_admin_view(request):
         "query": query,
         "pending_count": OwnerApplication.objects.filter(status=OwnerApplication.Status.PENDING).count(),
         "approved_count": OwnerApplication.objects.filter(status=OwnerApplication.Status.APPROVED).count(),
+        "rejected_count": OwnerApplication.objects.filter(status=OwnerApplication.Status.REJECTED).count(),
     })
 
 
@@ -296,6 +330,32 @@ def approve_owner_application_view(request, application_id):
             messages.success(request, f"{application.business_name} has been approved. Owner access is now available.")
         else:
             messages.info(request, "This application has already been approved.")
+    return redirect("owner_applications_admin")
+
+
+@admin_ui_required
+@require_POST
+def reject_owner_application_view(request, application_id):
+    """Reject a pending application. The account stays a customer, and the
+    applicant can read the optional reason and apply again."""
+    reason = request.POST.get("reason", "").strip()[:300]
+    with transaction.atomic():
+        application = get_object_or_404(
+            OwnerApplication.objects.select_for_update(), pk=application_id,
+        )
+        if application.status == OwnerApplication.Status.PENDING:
+            application.status = OwnerApplication.Status.REJECTED
+            application.rejection_reason = reason
+            application.reviewed_by = request.user
+            application.reviewed_at = timezone.now()
+            application.save(
+                update_fields=["status", "rejection_reason", "reviewed_by", "reviewed_at"]
+            )
+            messages.success(request, f"{application.business_name} has been rejected. The applicant can apply again.")
+        elif application.status == OwnerApplication.Status.APPROVED:
+            messages.info(request, "This application was already approved, so it can't be rejected here.")
+        else:
+            messages.info(request, "This application has already been rejected.")
     return redirect("owner_applications_admin")
 
 

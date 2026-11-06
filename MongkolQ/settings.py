@@ -146,3 +146,6 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no
 AUTH_USER_MODEL = "account.User"
 
 LOGIN_REDIRECT_URL = "home"
+
+# Customers can book from today up to this many months ahead.
+BOOKING_MAX_ADVANCE_MONTHS = 1

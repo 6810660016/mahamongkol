@@ -35,6 +35,7 @@ def booking_view(request, slug):
                 error = str(exc)
             else:
                 return redirect("my_queues")
+    min_date, max_date = services.booking_window()
     return render(
         request,
         "bookings/booking.html",
@@ -42,6 +43,8 @@ def booking_view(request, slug):
             "restaurant": restaurant,
             "error": error,
             "slots": services.SLOTS,
+            "min_date": min_date,
+            "max_date": max_date,
         },
     )
 
