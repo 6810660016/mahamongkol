@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -31,8 +32,9 @@ class AddMonthsTests(TestCase):
         self.assertEqual(services.add_months(date(2026, 11, 6), 0), date(2026, 11, 6))
 
 
+@override_settings(BOOKING_MAX_ADVANCE_MONTHS=1)
 class BookingWindowTests(TestCase):
-    def test_window_starts_today_and_defaults_to_one_month(self):
+    def test_window_starts_today_and_ends_after_the_configured_months(self):
         today = timezone.localdate()
         first, last = services.booking_window()
         self.assertEqual(first, today)
@@ -43,12 +45,18 @@ class BookingWindowTests(TestCase):
         today = timezone.localdate()
         self.assertEqual(services.booking_window()[1], services.add_months(today, 3))
 
+    def test_built_in_default_is_one_month_when_the_setting_is_missing(self):
+        with override_settings():
+            del settings.BOOKING_MAX_ADVANCE_MONTHS
+            self.assertEqual(services.advance_months(), 1)
+
     def test_window_can_be_computed_for_a_given_day(self):
         self.assertEqual(
             services.booking_window(date(2026, 1, 31)), (date(2026, 1, 31), date(2026, 2, 28))
         )
 
 
+@override_settings(BOOKING_MAX_ADVANCE_MONTHS=1)
 class BookingDateRangeTests(TestCase):
     def setUp(self):
         self.customer = User.objects.create_user("customer", "customer@example.com", "Queue-pass-2026")
@@ -101,7 +109,7 @@ class BookingDateRangeTests(TestCase):
         response = self.book(services.add_months(self.today, 3) + timedelta(days=1))
         self.assertContains(response, "3 months ahead")
 
-    def test_the_default_window_does_not_reach_two_months(self):
+    def test_a_one_month_window_does_not_reach_two_months(self):
         response = self.book(services.add_months(self.today, 2))
         self.assertContains(response, "Bookings are open up to")
         self.assertEqual(Booking.objects.count(), 0)
