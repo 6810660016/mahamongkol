@@ -43,7 +43,10 @@ def _slug_candidates(name):
 
 
 def create_restaurant(owner, data, *, extra_details=(), table_count=None, seats=None):
-    """สร้างร้านเป็น draft ให้ owner พร้อมโต๊ะเริ่มต้น"""
+    """สร้างร้านเป็น draft ให้ owner พร้อมโต๊ะเริ่มต้น (1 บัญชีมีได้ 1 ร้าน)"""
+    if Restaurant.objects.filter(owner=owner).exists():
+        raise RestaurantError("บัญชีนี้มีร้านอยู่แล้ว 1 ร้าน สร้างร้านเพิ่มไม่ได้")
+
     table_count = table_count or DEFAULT_TABLE_COUNT
     seats = seats or DEFAULT_SEATS
 
@@ -63,6 +66,9 @@ def create_restaurant(owner, data, *, extra_details=(), table_count=None, seats=
                 )
             return restaurant
         except IntegrityError:
+            if Restaurant.objects.filter(owner=owner).exists():
+                # สร้างพร้อมกันสองคำขอ อีกคำขอสร้างร้านให้บัญชีนี้ไปก่อนแล้ว
+                raise RestaurantError("บัญชีนี้มีร้านอยู่แล้ว 1 ร้าน สร้างร้านเพิ่มไม่ได้") from None
             continue  # slug ชน (รวมกรณีสร้างพร้อมกัน) ลอง slug ถัดไป
     raise RestaurantError("สร้างร้านไม่สำเร็จ กรุณาลองเปลี่ยนชื่อร้าน")
 

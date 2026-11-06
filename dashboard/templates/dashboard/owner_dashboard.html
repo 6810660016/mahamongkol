@@ -24,7 +24,7 @@
           <p>Keep every location in one calm, clear workspace.</p>
         </div>
         <div class="owner-hero__art" aria-hidden="true"><span class="owner-hero__art-ring"></span><span class="owner-hero__art-mark">M</span><span class="owner-hero__art-spark">✦</span></div>
-        <button class="owner-primary-button" type="button" data-open-store><span aria-hidden="true">＋</span> Add a store</button>
+        {% if not stores_data %}<button class="owner-primary-button" type="button" data-open-store><span aria-hidden="true">＋</span> Add a store</button>{% endif %}
       </div>
 
       <section class="owner-stats" aria-label="Store overview">
@@ -51,7 +51,7 @@
         <div class="owner-store-grid" data-store-grid aria-live="polite"></div>
         <div class="owner-empty-state" data-empty-state hidden>
           <span aria-hidden="true">⌂</span><h3>No stores found</h3><p>Try another search or add a new location.</p>
-          <button class="owner-text-button" type="button" data-open-store>Add a store <span aria-hidden="true">→</span></button>
+          {% if not stores_data %}<button class="owner-text-button" type="button" data-open-store>Add a store <span aria-hidden="true">→</span></button>{% endif %}
         </div>
       </section>
 
