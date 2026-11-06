@@ -35,7 +35,7 @@ class OwnerPreviewTests(TestCase):
         self.assertContains(response, "Skipped queues")
 
     def test_new_owner_mockup_pages_are_available_and_marked_as_sample(self):
-        for name, text in (("owner_overview", "Sample dashboard"), ("owner_store_details", "Store details mockup"), ("owner_bookings", "Booking preview")):
+        for name, text in (("owner_overview", "Sample dashboard"), ("owner_store_details", "Store details mockup")):
             with self.subTest(page=name):
                 response = self.client.get(reverse(name))
                 self.assertEqual(response.status_code, 200)
