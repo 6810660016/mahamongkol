@@ -7,40 +7,25 @@ together with the rest of the form. Cloudinary is always mocked: no network.
 from unittest.mock import patch
 
 from cloudinary.exceptions import Error as CloudinaryError
-from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import NoReverseMatch, reverse
 
-from account.models import OwnerApplication
 from restaurants.models import Restaurant
 from restaurants.services import MAX_IMAGE_BYTES
 
-User = get_user_model()
-
-PASSWORD = "Queue-pass-2026"
-UPLOAD_PATH = "restaurants.services.cloudinary.uploader.upload"
-NEW_URL = "https://res.cloudinary.com/demo/image/upload/v1/mahamongkol/new.jpg"
-OLD_URL = "https://example.com/old.jpg"
-
-JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"\x00" * 64
-PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
-WEBP_BYTES = b"RIFF\x00\x00\x00\x00WEBP" + b"\x00" * 64
-
-
-def make_owner(username):
-    owner = User.objects.create_user(
-        username, f"{username}@example.com", PASSWORD, role=User.Role.OWNER,
-    )
-    OwnerApplication.objects.create(
-        user=owner, contact_name=username, business_name=f"{username} business",
-        status=OwnerApplication.Status.APPROVED,
-    )
-    return owner
-
-
-def image_file(content=JPEG_BYTES, name="shop.jpg", content_type="image/jpeg"):
-    return SimpleUploadedFile(name, content, content_type=content_type)
+from .store_test_utils import (
+    JPEG_BYTES,
+    NEW_URL,
+    OLD_URL,
+    PNG_BYTES,
+    UPLOAD_PATH,
+    WEBP_BYTES,
+    User,
+    PASSWORD,
+    image_file,
+    make_owner,
+    valid_data,
+)
 
 
 class StoreImageSaveTests(TestCase):
@@ -51,8 +36,10 @@ class StoreImageSaveTests(TestCase):
         )
         self.url = reverse("owner_store_details")
 
-    def save(self, file=None, follow=True):
-        data = {} if file is None else {"image_file": file}
+    def save(self, file=None, follow=True, **fields):
+        data = valid_data(**fields)
+        if file is not None:
+            data["image_file"] = file
         return self.client.post(self.url, data, follow=follow)
 
     def assert_image_unchanged(self):

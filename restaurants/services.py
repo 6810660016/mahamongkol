@@ -18,7 +18,7 @@ CLOUDINARY_FOLDER = "mahamongkol/restaurants"
 
 # field ที่เจ้าของแก้ได้ผ่านฟอร์ม (ไม่รวม owner, slug, status, is_open, rating, reviews)
 EDITABLE_FIELDS = (
-    "name", "category", "price", "address", "hours", "image", "description",
+    "name", "category", "price", "address", "hours", "phone", "map_url", "image", "description",
     "no_show_grace_minutes",
     "service_mode",
 )

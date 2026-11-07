@@ -2,6 +2,7 @@ from datetime import date
 from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -12,7 +13,7 @@ from account.ui import get_landing_url_name
 from bookings import services as booking_services
 from bookings.models import Booking
 from restaurants import services
-from restaurants.forms import RestaurantForm
+from restaurants.forms import PRICE_CHOICES, RestaurantForm
 from restaurants.models import Restaurant
 
 
@@ -102,6 +103,39 @@ def owner_overview_view(request):
     return render(request, "dashboard/owner_overview.html")
 
 
+# ช่องข้อความ/ตัวเลือกบนหน้า Store Details (ชื่อ = name ของ input และชื่อ field ของ RestaurantForm)
+STORE_DETAIL_FIELDS = (
+    "name", "category", "price", "service_mode", "address",
+    "phone", "hours", "map_url", "description",
+)
+
+
+def _wants_json(request):
+    """fetch จาก owner_store_details.js ส่ง header นี้มา ฟอร์มปกติ (ไม่มี JS) จะไม่มี"""
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def _store_values(restaurant):
+    if restaurant is None:
+        return {}
+    return {field: getattr(restaurant, field) for field in STORE_DETAIL_FIELDS}
+
+
+def _render_store_details(request, restaurant, *, values=None, errors=None):
+    return render(
+        request,
+        "dashboard/owner_store_details.html",
+        {
+            "restaurant": restaurant,
+            "values": _store_values(restaurant) if values is None else values,
+            "errors": {f: " ".join(msgs) for f, msgs in (errors or {}).items()},
+            "category_choices": Restaurant.Category.choices,
+            "price_choices": PRICE_CHOICES,
+            "service_mode_choices": Restaurant.ServiceMode.choices,
+        },
+    )
+
+
 @owner_ui_required
 def owner_store_details_view(request):
     restaurant = Restaurant.objects.filter(owner=request.user).first()
@@ -109,36 +143,73 @@ def owner_store_details_view(request):
     if request.method == "POST":
         return _save_store_details(request, restaurant)
 
-    return render(
-        request,
-        "dashboard/owner_store_details.html",
-        {"restaurant": restaurant},
-    )
+    return _render_store_details(request, restaurant)
 
 
 def _save_store_details(request, restaurant):
-    """บันทึกหน้า Store Details ตอนกด Save (ตอนนี้บันทึกเฉพาะรูปโปรไฟล์)
+    """บันทึกหน้า Store Details ตอนกด Save (ข้อมูลร้าน + รูปโปรไฟล์ใน request เดียว)
 
-    รูปใหม่จะอัปโหลดขึ้น Cloudinary เฉพาะตอนนี้เท่านั้น ถ้าขั้นไหนพังจะไม่บันทึก
-    อะไรเลย รูปเดิมจึงไม่หาย Phase 4 เพิ่มฟิลด์อื่นลงใน `data` ก่อนเรียก update_restaurant
+    ลำดับ: ตรวจฟอร์มและไฟล์รูปให้ครบก่อน -> อัปโหลดรูปขึ้น Cloudinary (ถ้ามีไฟล์ใหม่)
+    -> update_restaurant ถ้าขั้นไหนไม่ผ่านจะไม่บันทึกอะไรเลย รูปเดิมและข้อมูลเดิมจึงไม่หาย
+    ตอบ JSON เมื่อเรียกจาก fetch (หน้าไม่ reload ไฟล์ที่เลือกไว้จึงอยู่ครบ)
+    ส่วนฟอร์มปกติ (ไม่มี JS) จะ redirect เมื่อสำเร็จ หรือ render หน้าเดิมพร้อมค่าที่กรอกเมื่อไม่ผ่าน
     """
+    wants_json = _wants_json(request)
+
     if restaurant is None:
-        messages.error(request, "บัญชีนี้ยังไม่มีร้าน กรุณาสร้างร้านจากแดชบอร์ดก่อน")
+        message = "บัญชีนี้ยังไม่มีร้าน กรุณาสร้างร้านจากแดชบอร์ดก่อน"
+        if wants_json:
+            return JsonResponse({"ok": False, "error": message, "errors": {}}, status=404)
+        messages.error(request, message)
         return redirect("owner_store_details")
 
-    data = {}
+    form = RestaurantForm(request.POST)
+    form_valid = form.is_valid()
+    errors = {field: list(msgs) for field, msgs in form.errors.items()}
+
+    image_file = request.FILES.get("image_file")
+    if image_file:
+        try:
+            services.validate_image_upload(image_file)
+        except services.RestaurantError as exc:
+            errors["image_file"] = [str(exc)]
+
+    if not form_valid or errors:
+        message = "ยังไม่ได้บันทึก กรุณาตรวจสอบช่องที่มีข้อความแจ้งเตือน"
+        if wants_json:
+            return JsonResponse({"ok": False, "error": message, "errors": errors}, status=400)
+        messages.error(request, message)
+        values = {**_store_values(restaurant), **{
+            field: request.POST[field] for field in STORE_DETAIL_FIELDS if field in request.POST
+        }}
+        return _render_store_details(request, restaurant, values=values, errors=errors)
+
+    data = dict(form.cleaned_data)
+    # รูปเปลี่ยนได้ทางเดียวคืออัปโหลดไฟล์ใหม่ (ฟิลด์ image ของฟอร์มไม่ได้อยู่บนหน้านี้)
+    data.pop("image", None)
+
     try:
-        image_file = request.FILES.get("image_file")
         if image_file:
             data["image"] = services.upload_image_to_cloudinary(
                 restaurant, request.user, image_file
             )
+        # ไม่ส่ง extra_details: หน้านี้ไม่มีช่อง Extra details จึงคงค่าเดิมไว้
         services.update_restaurant(restaurant, request.user, data)
     except services.RestaurantError as exc:
+        if wants_json:
+            upload_errors = {"image_file": [str(exc)]} if image_file else {}
+            return JsonResponse(
+                {"ok": False, "error": str(exc), "errors": upload_errors}, status=400
+            )
         messages.error(request, str(exc))
-    else:
-        messages.success(request, f"บันทึกร้าน {restaurant.name} แล้ว")
+        return redirect("owner_store_details")
 
+    message = f"บันทึกร้าน {restaurant.name} แล้ว"
+    if wants_json:
+        return JsonResponse(
+            {"ok": True, "message": message, "name": restaurant.name, "image_url": restaurant.image}
+        )
+    messages.success(request, message)
     return redirect("owner_store_details")
 
 

@@ -3,32 +3,19 @@
 import re
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
 from django.urls import reverse
 
-from account.models import OwnerApplication
 from restaurants.models import Restaurant
 
-User = get_user_model()
-
-PASSWORD = "Queue-pass-2026"
-UPLOAD_PATH = "restaurants.services.cloudinary.uploader.upload"
-NEW_URL = "https://res.cloudinary.com/demo/image/upload/v1/mahamongkol/new.jpg"
-OLD_URL = "https://example.com/old.jpg"
-JPEG_BYTES = b"\xff\xd8\xff\xe0" + b"\x00" * 64
-
-
-def make_owner(username):
-    owner = User.objects.create_user(
-        username, f"{username}@example.com", PASSWORD, role=User.Role.OWNER,
-    )
-    OwnerApplication.objects.create(
-        user=owner, contact_name=username, business_name=f"{username} business",
-        status=OwnerApplication.Status.APPROVED,
-    )
-    return owner
+from .store_test_utils import (
+    NEW_URL,
+    OLD_URL,
+    UPLOAD_PATH,
+    image_file,
+    make_owner,
+    valid_data,
+)
 
 
 class OwnerStoreDetailsPageTests(TestCase):
@@ -85,6 +72,41 @@ class OwnerStoreDetailsPageTests(TestCase):
         self.assertEqual(self.client.get(self.url).status_code, 302)
 
 
+    def test_page_shows_all_editable_fields_with_current_values(self):
+        Restaurant.objects.create(
+            owner=self.owner, slug="full", name="Full Shop", category="Café",
+            price="$$ · Mid-range", service_mode="queue", address="9 River Rd",
+            phone="02-123-4567", map_url="https://maps.example.com/full",
+        )
+        self.client.force_login(self.owner)
+        response = self.client.get(self.url)
+        html = response.content.decode()
+        for name in ("name", "category", "price", "service_mode", "address",
+                     "phone", "hours", "map_url", "description"):
+            with self.subTest(field=name):
+                self.assertIn(f'name="{name}"', html)
+        self.assertContains(response, "9 River Rd")
+        self.assertContains(response, 'value="02-123-4567"')
+        self.assertContains(response, 'value="https://maps.example.com/full"')
+        # ตัวเลือกที่บันทึกไว้ต้องถูก select
+        self.assertContains(response, '<option value="Café" selected>')
+        self.assertContains(response, '<option value="$$ · Mid-range" selected>')
+        self.assertContains(response, '<option value="queue" selected>')
+
+    def test_page_exposes_error_slots_for_the_script(self):
+        Restaurant.objects.create(owner=self.owner, slug="e", name="E")
+        self.client.force_login(self.owner)
+        response = self.client.get(self.url)
+        for name in ("name", "category", "address", "phone", "map_url", "image_file"):
+            with self.subTest(field=name):
+                self.assertContains(response, f'data-error-for="{name}"')
+
+    def test_save_button_is_disabled_without_a_store(self):
+        self.client.force_login(self.owner)
+        html = self.client.get(self.url).content.decode()
+        self.assertRegex(html, r"<button type=\"submit\" data-save-button disabled>")
+
+
 class StoreDetailsSaveContractTests(TestCase):
     """What the browser does on Save: POST the form (multipart) with its CSRF token."""
 
@@ -104,8 +126,7 @@ class StoreDetailsSaveContractTests(TestCase):
         return match.group(1)
 
     def post(self, **data):
-        file = SimpleUploadedFile("a.jpg", JPEG_BYTES, content_type="image/jpeg")
-        return self.client.post(self.url, {"image_file": file, **data})
+        return self.client.post(self.url, {**valid_data(), "image_file": image_file(), **data})
 
     @patch(UPLOAD_PATH, return_value={"secure_url": NEW_URL})
     def test_save_with_csrf_token_from_form_succeeds(self, _upload):
@@ -121,14 +142,3 @@ class StoreDetailsSaveContractTests(TestCase):
         upload.assert_not_called()
         self.store.refresh_from_db()
         self.assertEqual(self.store.image, OLD_URL)
-
-    @patch(UPLOAD_PATH, return_value={"secure_url": NEW_URL})
-    def test_other_form_fields_are_not_changed_by_saving_the_photo(self, _upload):
-        self.store.description = "Garden cafe"
-        self.store.hours = "Daily 9-18"
-        self.store.save()
-        self.post(csrfmiddlewaretoken=self.csrf_token_from_form(), name="Hacked")
-        self.store.refresh_from_db()
-        self.assertEqual(self.store.name, "Store")  # ฟิลด์อื่นยังเป็น preview (Phase 4)
-        self.assertEqual(self.store.description, "Garden cafe")
-        self.assertEqual(self.store.hours, "Daily 9-18")

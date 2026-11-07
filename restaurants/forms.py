@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 
 from .models import MAX_NO_SHOW_GRACE_MINUTES, Restaurant
@@ -10,6 +12,9 @@ PRICE_CHOICES = [
 ]
 
 MAX_EXTRAS = 10
+PHONE_PATTERN = re.compile(r"^[0-9+()\-\s.]*$")
+# ฟิลด์ที่ฟอร์มเก่า (modal Edit) ไม่ได้ส่งมา: ถ้า request ไม่มี key นี้ต้องคงค่าเดิมไว้
+OPTIONAL_KEYS = ("phone", "map_url")
 
 
 class RestaurantForm(forms.ModelForm):
@@ -33,6 +38,8 @@ class RestaurantForm(forms.ModelForm):
             "price",
             "address",
             "hours",
+            "phone",
+            "map_url",
             "image",
             "description",
             "service_mode",
@@ -57,8 +64,23 @@ class RestaurantForm(forms.ModelForm):
             raise forms.ValidationError("ลิงก์รูปต้องขึ้นต้นด้วย http:// หรือ https://")
         return url
 
+    def clean_phone(self):
+        phone = self.cleaned_data.get("phone", "").strip()
+        if not PHONE_PATTERN.match(phone):
+            raise forms.ValidationError("เบอร์โทรใส่ได้เฉพาะตัวเลข เว้นวรรค และเครื่องหมาย + - ( )")
+        return phone
+
+    def clean_map_url(self):
+        url = self.cleaned_data.get("map_url", "").strip()
+        if url and not url.lower().startswith(("http://", "https://")):
+            raise forms.ValidationError("ลิงก์แผนที่ต้องขึ้นต้นด้วย http:// หรือ https://")
+        return url
+
     def clean(self):
         cleaned = super().clean()
+        for key in OPTIONAL_KEYS:
+            if key not in self.data:
+                cleaned.pop(key, None)
         if not cleaned.get("service_mode"):
             cleaned.pop("service_mode", None)
         keys = self.data.getlist("extra_key")

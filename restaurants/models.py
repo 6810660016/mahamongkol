@@ -50,6 +50,9 @@ class Restaurant(models.Model):
     price = models.CharField(max_length=60, blank=True)
     address = models.CharField(max_length=200, blank=True)
     hours = models.CharField(max_length=100, blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    # ลิงก์ Google Maps ฯลฯ ยาวได้เกิน 200 ตัวอักษร จึงตั้ง max_length เอง
+    map_url = models.URLField(max_length=500, blank=True)
     image = models.URLField(blank=True)
     description = models.TextField(blank=True)
     # นาทีที่รอลูกค้าหลังเวลานัด ก่อนนับการจองที่ยัง confirmed เป็น No Show
