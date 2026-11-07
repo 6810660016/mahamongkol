@@ -11,6 +11,7 @@ from account.decorators import customer_ui_required, owner_ui_required
 from account.ui import get_landing_url_name
 from bookings import services as booking_services
 from bookings.models import Booking
+from dashboard import stats
 from restaurants import services
 from restaurants.forms import RestaurantForm
 from restaurants.models import Restaurant
@@ -99,7 +100,13 @@ def owner_dashboard_view(request):
 
 @owner_ui_required
 def owner_overview_view(request):
-    return render(request, "dashboard/owner_overview.html")
+    restaurant = Restaurant.objects.filter(owner=request.user).first()
+    days = stats.parse_range(request.GET.get("range"))
+    context = {
+        "restaurant": restaurant,
+        "stats": stats.owner_overview_stats(restaurant, days),
+    }
+    return render(request, "dashboard/owner_overview.html", context)
 
 
 @owner_ui_required

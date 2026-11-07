@@ -9,4 +9,9 @@ urlpatterns = [
         views.restaurant_detail_view,
         name="restaurant_detail",
     ),
+    path(
+        "restaurants/<slug:slug>/review/",
+        views.restaurant_review_view,
+        name="restaurant_review",
+    ),
 ]

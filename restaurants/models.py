@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.core.validators import MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 DEFAULT_NO_SHOW_GRACE_MINUTES = 30
@@ -92,3 +92,32 @@ class Table(models.Model):
 
     def __str__(self):
         return f"{self.restaurant.name} · {self.name} ({self.capacity} seats)"
+
+
+class Review(models.Model):
+    """One star rating (with optional comment) per customer per restaurant."""
+
+    MAX_MESSAGE_LENGTH = 500
+
+    restaurant = models.ForeignKey(
+        Restaurant, on_delete=models.CASCADE, related_name="review_set"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reviews"
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    message = models.CharField(max_length=MAX_MESSAGE_LENGTH, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = (
+            models.UniqueConstraint(
+                fields=["restaurant", "user"], name="one_review_per_user_and_restaurant"
+            ),
+        )
+
+    def __str__(self):
+        return f"{self.restaurant.name} · {self.rating}★ by {self.user}"
