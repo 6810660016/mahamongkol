@@ -1,2 +1,8 @@
 [lint.per-file-ignores]
 "*/migrations/*.py" = ["RUF012"]
+# Django forms use plain dicts for Meta options and error_messages.
+"*/forms.py" = ["RUF012"]
+# Sending the OTP email may fail in many ways (SMTP, network, settings); the view shows one message for all of them.
+"account/views.py" = ["BLE001"]
+# The project package name comes from `django-admin startproject` and is used in settings.
+"MongkolQ/__init__.py" = ["N999"]

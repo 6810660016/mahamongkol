@@ -1,0 +1,10 @@
+[run]
+source = .
+omit =
+    venv/*
+    .venv/*
+    */migrations/*
+
+[report]
+show_missing = True
+skip_covered = True
