@@ -6,49 +6,29 @@
   const toast = document.querySelector("[data-store-toast]");
   let toastTimer;
   const announce = (message) => { toast.textContent = message; toast.classList.add("is-visible"); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove("is-visible"), 3500); };
-  const uploadUrl = form.dataset.uploadUrl;
-  const csrfToken = form.dataset.csrf;
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
   const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-  // รูปโปรไฟล์: อัปโหลดจริงผ่าน Django -> Cloudinary (เซิร์ฟเวอร์ตรวจไฟล์ซ้ำเสมอ)
-  const uploadProfileImage = async (file) => {
-    const data = new FormData();
-    data.append("image", file);
-    const response = await fetch(uploadUrl, {
-      method: "POST",
-      headers: { "X-CSRFToken": csrfToken },
-      body: data,
-      credentials: "same-origin",
-    });
-    let payload = null;
-    try { payload = await response.json(); } catch (error) { payload = null; }
-    if (!response.ok || !payload || !payload.ok) {
-      throw new Error((payload && payload.error) || "อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
-    }
-    return payload.image_url;
-  };
-
+  // เลือกรูปแล้วแสดงแค่ preview ยังไม่ส่งอะไรไปเซิร์ฟเวอร์
+  // ไฟล์จะถูกส่งไปพร้อมฟอร์มตอนกด Save (เซิร์ฟเวอร์ตรวจไฟล์ซ้ำเสมอ)
   form.querySelectorAll("[data-image-input]").forEach((input) => {
     const box = input.closest(".store-upload");
     const image = box.querySelector("img");
     const label = box.querySelector("[data-image-label]");
     const isProfile = input.hasAttribute("data-profile-input");
+    const savedSrc = isProfile ? image.getAttribute("src") : null;
     let previewUrl;
-    let savedSrc = isProfile ? image.getAttribute("src") : null;
-    let uploading = false;
 
     const showImage = (src) => { image.src = src; image.hidden = false; label.hidden = true; };
     const showEmpty = () => { image.removeAttribute("src"); image.hidden = true; label.hidden = false; };
     const restoreSaved = () => { if (savedSrc) showImage(savedSrc); else showEmpty(); };
     const clearPreview = () => { if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; } };
 
-    input.addEventListener("change", async () => {
+    input.addEventListener("change", () => {
       const file = input.files[0];
-      if (uploading) return;
       clearPreview();
 
-      // ช่องรูปอื่นๆ ยังเป็น preview เท่านั้น (ยังไม่บันทึก)
+      // ช่องรูปแกลเลอรี่ยังเป็น preview เท่านั้น (ไม่มี name จึงไม่ถูกส่ง)
       if (!isProfile) {
         if (!file) { showEmpty(); return; }
         previewUrl = URL.createObjectURL(file);
@@ -57,32 +37,11 @@
       }
 
       if (!file) { restoreSaved(); return; }
-      if (!uploadUrl) { announce("ยังไม่มีร้านสำหรับบัญชีนี้ จึงอัปโหลดรูปไม่ได้"); input.value = ""; return; }
-      if (!IMAGE_TYPES.includes(file.type)) { announce("รองรับเฉพาะไฟล์รูป JPG, PNG หรือ WebP เท่านั้น"); input.value = ""; return; }
-      if (file.size > MAX_IMAGE_BYTES) { announce("ไฟล์รูปต้องมีขนาดไม่เกิน 5 MB"); input.value = ""; return; }
+      if (!IMAGE_TYPES.includes(file.type)) { announce("รองรับเฉพาะไฟล์รูป JPG, PNG หรือ WebP เท่านั้น"); input.value = ""; restoreSaved(); return; }
+      if (file.size > MAX_IMAGE_BYTES) { announce("ไฟล์รูปต้องมีขนาดไม่เกิน 5 MB"); input.value = ""; restoreSaved(); return; }
 
       previewUrl = URL.createObjectURL(file);
       showImage(previewUrl);
-      uploading = true;
-      input.disabled = true;
-      box.classList.add("is-uploading");
-      box.setAttribute("aria-busy", "true");
-      try {
-        const url = await uploadProfileImage(file);
-        savedSrc = url;
-        showImage(url);
-        announce("อัปโหลดรูปโปรไฟล์เรียบร้อยแล้ว");
-      } catch (error) {
-        restoreSaved();
-        announce(error.message);
-      } finally {
-        clearPreview();
-        input.value = "";
-        input.disabled = false;
-        uploading = false;
-        box.classList.remove("is-uploading");
-        box.removeAttribute("aria-busy");
-      }
     });
   });
   form.querySelector("[data-add-slot]").addEventListener("click", () => {
@@ -91,5 +50,13 @@
     list.append(row);
   });
   list.addEventListener("click", (event) => { const button = event.target.closest("[data-remove-slot]"); if (button) button.closest("tr").remove(); });
-  form.addEventListener("submit", (event) => { event.preventDefault(); if (form.reportValidity()) announce("Preview updated on this page only. No store data was saved."); });
+  // กดซ้ำไม่ได้ระหว่างบันทึก (อัปโหลดรูปอาจใช้เวลา) หน้าจะโหลดใหม่เองหลังเซิร์ฟเวอร์ตอบ
+  const saveButton = form.querySelector("[data-save-button]");
+  const saveLabel = saveButton ? saveButton.innerHTML : "";
+  form.addEventListener("submit", (event) => {
+    if (!form.reportValidity()) { event.preventDefault(); return; }
+    if (saveButton) { saveButton.disabled = true; saveButton.textContent = "กำลังบันทึก…"; }
+  });
+  // กลับมาที่หน้านี้ด้วยปุ่ม Back (bfcache) ให้ปุ่มกดได้อีกครั้ง
+  window.addEventListener("pageshow", () => { if (saveButton) { saveButton.disabled = false; saveButton.innerHTML = saveLabel; } });
 })();

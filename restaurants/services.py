@@ -153,10 +153,12 @@ def validate_image_upload(uploaded_file):
         raise RestaurantError("รองรับเฉพาะไฟล์รูป JPG, PNG หรือ WebP เท่านั้น")
 
 
-def upload_restaurant_image(restaurant, by_user, uploaded_file):
-    """อัปโหลดรูปหลักขึ้น Cloudinary แล้วเก็บ secure_url ลง Restaurant.image
+def upload_image_to_cloudinary(restaurant, by_user, uploaded_file):
+    """ตรวจไฟล์รูปแล้วอัปโหลดขึ้น Cloudinary คืนค่า secure_url
 
-    ถ้าอัปโหลดล้มเหลว จะไม่แตะ image เดิม
+    ฟังก์ชันนี้ **ไม่บันทึก** อะไรลง DB ผู้เรียกต้องนำ URL ไปบันทึกเองผ่าน
+    update_restaurant พร้อมฟิลด์อื่น เพื่อให้รูปกับข้อมูลร้านเปลี่ยนพร้อมกันตอนกด Save
+    ถ้าตรวจไฟล์หรืออัปโหลดไม่ผ่านจะ raise RestaurantError (ไม่แตะรูปเดิม)
     """
     _require_manage(by_user, restaurant)
     validate_image_upload(uploaded_file)
@@ -167,10 +169,6 @@ def upload_restaurant_image(restaurant, by_user, uploaded_file):
             folder=f"{CLOUDINARY_FOLDER}/{restaurant.pk}",
             resource_type="image",
         )
-        url = result["secure_url"]
+        return result["secure_url"]
     except (CloudinaryError, KeyError, OSError):
         raise RestaurantError("อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง") from None
-
-    restaurant.image = url
-    restaurant.save(update_fields=["image"])
-    return url

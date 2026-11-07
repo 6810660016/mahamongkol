@@ -1,4 +1,4 @@
-"""The Store Details page: real store data, profile photo upload wiring, CSRF."""
+"""The Store Details page: real store data, profile photo saved on Save, CSRF."""
 
 import re
 from unittest.mock import patch
@@ -35,7 +35,6 @@ class OwnerStoreDetailsPageTests(TestCase):
     def setUp(self):
         self.owner = make_owner("owner-a")
         self.url = reverse("owner_store_details")
-        self.upload_url = reverse("owner_store_image_upload")
 
     def test_page_shows_real_store_data_not_mockup_samples(self):
         Restaurant.objects.create(
@@ -49,7 +48,12 @@ class OwnerStoreDetailsPageTests(TestCase):
         self.assertContains(response, "Garden cafe")
         self.assertContains(response, "Daily 9-18")
         self.assertContains(response, f'src="{OLD_URL}"')
-        self.assertContains(response, f'data-upload-url="{self.upload_url}"')
+        # รูปถูกส่งไปพร้อมฟอร์มตอนกด Save (ไม่ใช่ fetch ตอนเลือกไฟล์)
+        self.assertContains(response, 'method="post"')
+        self.assertContains(response, 'enctype="multipart/form-data"')
+        self.assertContains(response, 'name="image_file"')
+        self.assertContains(response, "csrfmiddlewaretoken")
+        self.assertNotContains(response, "data-upload-url")
         self.assertNotContains(response, "SAMPLE STORE")
         self.assertNotContains(response, "Sample Bistro")
 
@@ -81,8 +85,8 @@ class OwnerStoreDetailsPageTests(TestCase):
         self.assertEqual(self.client.get(self.url).status_code, 302)
 
 
-class StoreDetailsUploadContractTests(TestCase):
-    """What the page's JavaScript does: read data-csrf, POST FormData with X-CSRFToken."""
+class StoreDetailsSaveContractTests(TestCase):
+    """What the browser does on Save: POST the form (multipart) with its CSRF token."""
 
     def setUp(self):
         self.owner = make_owner("owner-a")
@@ -91,30 +95,40 @@ class StoreDetailsUploadContractTests(TestCase):
         )
         self.client = Client(enforce_csrf_checks=True)
         self.client.force_login(self.owner)
+        self.url = reverse("owner_store_details")
 
-    def csrf_token_from_page(self):
-        html = self.client.get(reverse("owner_store_details")).content.decode()
-        match = re.search(r'data-csrf="([^"]+)"', html)
-        self.assertIsNotNone(match, "page must expose the CSRF token to the script")
+    def csrf_token_from_form(self):
+        html = self.client.get(self.url).content.decode()
+        match = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', html)
+        self.assertIsNotNone(match, "the form must contain a CSRF token")
         return match.group(1)
 
-    def post(self, **extra):
+    def post(self, **data):
         file = SimpleUploadedFile("a.jpg", JPEG_BYTES, content_type="image/jpeg")
-        return self.client.post(reverse("owner_store_image_upload"), {"image": file}, **extra)
+        return self.client.post(self.url, {"image_file": file, **data})
 
     @patch(UPLOAD_PATH, return_value={"secure_url": NEW_URL})
-    def test_upload_with_csrf_header_from_page_succeeds(self, _upload):
-        token = self.csrf_token_from_page()
-        response = self.post(HTTP_X_CSRFTOKEN=token)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["image_url"], NEW_URL)
+    def test_save_with_csrf_token_from_form_succeeds(self, _upload):
+        response = self.post(csrfmiddlewaretoken=self.csrf_token_from_form())
+        self.assertEqual(response.status_code, 302)
         self.store.refresh_from_db()
         self.assertEqual(self.store.image, NEW_URL)
 
     @patch(UPLOAD_PATH)
-    def test_upload_without_csrf_token_is_rejected(self, upload):
+    def test_save_without_csrf_token_is_rejected(self, upload):
         response = self.post()
         self.assertEqual(response.status_code, 403)
         upload.assert_not_called()
         self.store.refresh_from_db()
         self.assertEqual(self.store.image, OLD_URL)
+
+    @patch(UPLOAD_PATH, return_value={"secure_url": NEW_URL})
+    def test_other_form_fields_are_not_changed_by_saving_the_photo(self, _upload):
+        self.store.description = "Garden cafe"
+        self.store.hours = "Daily 9-18"
+        self.store.save()
+        self.post(csrfmiddlewaretoken=self.csrf_token_from_form(), name="Hacked")
+        self.store.refresh_from_db()
+        self.assertEqual(self.store.name, "Store")  # ฟิลด์อื่นยังเป็น preview (Phase 4)
+        self.assertEqual(self.store.description, "Garden cafe")
+        self.assertEqual(self.store.hours, "Daily 9-18")

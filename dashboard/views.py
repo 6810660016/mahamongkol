@@ -2,7 +2,6 @@ from datetime import date
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -106,6 +105,10 @@ def owner_overview_view(request):
 @owner_ui_required
 def owner_store_details_view(request):
     restaurant = Restaurant.objects.filter(owner=request.user).first()
+
+    if request.method == "POST":
+        return _save_store_details(request, restaurant)
+
     return render(
         request,
         "dashboard/owner_store_details.html",
@@ -113,22 +116,30 @@ def owner_store_details_view(request):
     )
 
 
-@owner_ui_required
-@require_POST
-def owner_store_image_upload_view(request):
-    """อัปโหลดรูปหลักของร้านตัวเอง (OneToOne) ผ่าน Django -> Cloudinary"""
-    restaurant = Restaurant.objects.filter(owner=request.user).first()
+def _save_store_details(request, restaurant):
+    """บันทึกหน้า Store Details ตอนกด Save (ตอนนี้บันทึกเฉพาะรูปโปรไฟล์)
+
+    รูปใหม่จะอัปโหลดขึ้น Cloudinary เฉพาะตอนนี้เท่านั้น ถ้าขั้นไหนพังจะไม่บันทึก
+    อะไรเลย รูปเดิมจึงไม่หาย Phase 4 เพิ่มฟิลด์อื่นลงใน `data` ก่อนเรียก update_restaurant
+    """
     if restaurant is None:
-        return JsonResponse({"ok": False, "error": "บัญชีนี้ยังไม่มีร้าน"}, status=404)
+        messages.error(request, "บัญชีนี้ยังไม่มีร้าน กรุณาสร้างร้านจากแดชบอร์ดก่อน")
+        return redirect("owner_store_details")
 
+    data = {}
     try:
-        image_url = services.upload_restaurant_image(
-            restaurant, request.user, request.FILES.get("image")
-        )
+        image_file = request.FILES.get("image_file")
+        if image_file:
+            data["image"] = services.upload_image_to_cloudinary(
+                restaurant, request.user, image_file
+            )
+        services.update_restaurant(restaurant, request.user, data)
     except services.RestaurantError as exc:
-        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, f"บันทึกร้าน {restaurant.name} แล้ว")
 
-    return JsonResponse({"ok": True, "image_url": image_url})
+    return redirect("owner_store_details")
 
 
 _COMPLETE_ERRORS = {
