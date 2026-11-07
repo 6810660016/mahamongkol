@@ -2,6 +2,7 @@ from datetime import date
 from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -105,6 +106,24 @@ def owner_overview_view(request):
 @owner_ui_required
 def owner_store_details_view(request):
     return render(request, "dashboard/owner_store_details.html")
+
+
+@owner_ui_required
+@require_POST
+def owner_store_image_upload_view(request):
+    """อัปโหลดรูปหลักของร้านตัวเอง (OneToOne) ผ่าน Django -> Cloudinary"""
+    restaurant = Restaurant.objects.filter(owner=request.user).first()
+    if restaurant is None:
+        return JsonResponse({"ok": False, "error": "บัญชีนี้ยังไม่มีร้าน"}, status=404)
+
+    try:
+        image_url = services.upload_restaurant_image(
+            restaurant, request.user, request.FILES.get("image")
+        )
+    except services.RestaurantError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+
+    return JsonResponse({"ok": True, "image_url": image_url})
 
 
 _COMPLETE_ERRORS = {

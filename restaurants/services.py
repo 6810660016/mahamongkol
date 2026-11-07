@@ -1,3 +1,5 @@
+import cloudinary.uploader
+from cloudinary.exceptions import Error as CloudinaryError
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.utils.text import slugify
@@ -8,6 +10,11 @@ DEFAULT_TABLE_COUNT = 6
 DEFAULT_SEATS = 4
 RESERVED_SLUGS = {"new"}  # ชนกับ route owner/stores/new/
 MAX_SLUG_ATTEMPTS = 20
+
+# รูปหลักของร้านที่อัปโหลดขึ้น Cloudinary
+MAX_IMAGE_BYTES = 5 * 1024 * 1024  # 5 MB
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+CLOUDINARY_FOLDER = "mahamongkol/restaurants"
 
 # field ที่เจ้าของแก้ได้ผ่านฟอร์ม (ไม่รวม owner, slug, status, is_open, rating, reviews)
 EDITABLE_FIELDS = (
@@ -122,3 +129,48 @@ def delete_restaurant(restaurant, by_user):
         raise RestaurantError(
             "ร้านนี้มีประวัติการจองอยู่ จึงลบไม่ได้ ให้ปิดร้านแทน"
         ) from None
+
+
+def _looks_like_image(uploaded_file):
+    """ตรวจ magic bytes จริงของไฟล์ (JPEG/PNG/WebP) ไม่เชื่อแค่นามสกุลหรือ Content-Type"""
+    uploaded_file.seek(0)
+    head = uploaded_file.read(12)
+    uploaded_file.seek(0)
+    return (
+        head.startswith(b"\xff\xd8\xff")  # JPEG
+        or head.startswith(b"\x89PNG\r\n\x1a\n")  # PNG
+        or (head[:4] == b"RIFF" and head[8:12] == b"WEBP")  # WebP
+    )
+
+
+def validate_image_upload(uploaded_file):
+    """ตรวจไฟล์รูปที่อัปโหลด ถ้าไม่ผ่านจะ raise RestaurantError"""
+    if uploaded_file is None:
+        raise RestaurantError("กรุณาเลือกไฟล์รูปภาพ")
+    if uploaded_file.size > MAX_IMAGE_BYTES:
+        raise RestaurantError("ไฟล์รูปต้องมีขนาดไม่เกิน 5 MB")
+    if uploaded_file.content_type not in ALLOWED_IMAGE_TYPES or not _looks_like_image(uploaded_file):
+        raise RestaurantError("รองรับเฉพาะไฟล์รูป JPG, PNG หรือ WebP เท่านั้น")
+
+
+def upload_restaurant_image(restaurant, by_user, uploaded_file):
+    """อัปโหลดรูปหลักขึ้น Cloudinary แล้วเก็บ secure_url ลง Restaurant.image
+
+    ถ้าอัปโหลดล้มเหลว จะไม่แตะ image เดิม
+    """
+    _require_manage(by_user, restaurant)
+    validate_image_upload(uploaded_file)
+
+    try:
+        result = cloudinary.uploader.upload(
+            uploaded_file,
+            folder=f"{CLOUDINARY_FOLDER}/{restaurant.pk}",
+            resource_type="image",
+        )
+        url = result["secure_url"]
+    except (CloudinaryError, KeyError, OSError):
+        raise RestaurantError("อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง") from None
+
+    restaurant.image = url
+    restaurant.save(update_fields=["image"])
+    return url
