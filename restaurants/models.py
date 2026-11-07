@@ -1,5 +1,10 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator
 from django.db import models
+
+DEFAULT_NO_SHOW_GRACE_MINUTES = 30
+MAX_NO_SHOW_GRACE_MINUTES = 240
+
 
 class RestaurantQuerySet(models.QuerySet):
     def published(self):
@@ -38,6 +43,11 @@ class Restaurant(models.Model):
     hours = models.CharField(max_length=100, blank=True)
     image = models.URLField(blank=True)
     description = models.TextField(blank=True)
+    # นาทีที่รอลูกค้าหลังเวลานัด ก่อนนับการจองที่ยัง confirmed เป็น No Show
+    no_show_grace_minutes = models.PositiveSmallIntegerField(
+        default=DEFAULT_NO_SHOW_GRACE_MINUTES,
+        validators=[MaxValueValidator(MAX_NO_SHOW_GRACE_MINUTES)],
+    )
     objects = RestaurantQuerySet.as_manager()
 
     class Meta:

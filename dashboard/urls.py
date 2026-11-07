@@ -20,6 +20,11 @@ urlpatterns = [
         views.owner_booking_cancel_view,
         name="owner_booking_cancel",
     ),
+    path(
+        "owner/bookings/<int:booking_id>/complete/",
+        views.owner_booking_complete_view,
+        name="owner_booking_complete",
+    ),
     path("owner/queue/", views.owner_queue_view, name="owner_queue"),
 
     # Store management

@@ -66,6 +66,7 @@ def owner_dashboard_view(request):
             "price": store.price,
             "address": store.address,
             "hours": store.hours,
+            "noShowGraceMinutes": store.no_show_grace_minutes,
             "image": store.image,
             "description": store.description,
             "status": store.status,
@@ -106,8 +107,18 @@ def owner_store_details_view(request):
     return render(request, "dashboard/owner_store_details.html")
 
 
+_COMPLETE_ERRORS = {
+    "This booking is already completed.": "การจองนี้เสร็จสิ้นไปแล้ว",
+    "A cancelled booking cannot be completed.": "การจองที่ยกเลิกแล้วไม่สามารถเปลี่ยนเป็นเสร็จสิ้นได้",
+    "This booking is not due yet.": "ยังไม่ถึงวันที่จอง จึงยังเปลี่ยนเป็นเสร็จสิ้นไม่ได้",
+    "This no-show can no longer be changed to completed.": "เลยวันที่จองแล้ว ไม่สามารถเปลี่ยน No Show เป็นเสร็จสิ้นได้",
+    "This booking can no longer be completed.": "ไม่สามารถเปลี่ยนสถานะการจองนี้ได้",
+    "You are not allowed to complete this booking.": "คุณไม่มีสิทธิ์จัดการการจองนี้",
+}
+
+
 def _booking_code(booking):
-    return f"B{booking.id:03d}"
+    return booking.code
 
 
 def _bookings_url(day):
@@ -126,6 +137,9 @@ def owner_bookings_view(request):
 
     bookings_data = []
     if restaurant is not None:
+        # ไม่มี background worker: อัปเดต No Show ของร้านนี้ทุกครั้งที่เปิดหน้า
+        booking_services.mark_no_shows(restaurant=restaurant)
+        now = timezone.now()
         for booking in booking_services.bookings_for_day(restaurant, day):
             bookings_data.append(
                 {
@@ -135,7 +149,10 @@ def owner_bookings_view(request):
                     "party": booking.guests,
                     "table": booking.table.name,
                     "status": booking.status,
+                    "canCancel": booking.status == Booking.Status.CONFIRMED,
+                    "canComplete": booking_services.can_complete(booking, now),
                     "cancelUrl": reverse("owner_booking_cancel", args=[booking.id]),
+                    "completeUrl": reverse("owner_booking_complete", args=[booking.id]),
                 }
             )
 
@@ -166,6 +183,30 @@ def owner_booking_cancel_view(request, booking_id):
         messages.error(request, str(exc))
     else:
         messages.success(request, f"ยกเลิกการจอง {_booking_code(booking)} แล้ว")
+
+    return redirect(_bookings_url(booking.date))
+
+
+@owner_ui_required
+@require_POST
+def owner_booking_complete_view(request, booking_id):
+    # การจองของร้านอื่น (หรือเจ้าของที่ไม่มีร้าน) จะได้ 404
+    booking = get_object_or_404(
+        Booking.objects.select_related("table__restaurant", "user"),
+        pk=booking_id,
+        table__restaurant__owner=request.user,
+    )
+
+    # อัปเดต No Show ก่อน เพื่อให้ตรวจสถานะจากข้อมูลล่าสุด
+    booking_services.mark_no_shows(restaurant=booking.table.restaurant)
+    booking.refresh_from_db()
+
+    try:
+        booking_services.complete_booking(booking, request.user)
+    except booking_services.BookingError as exc:
+        messages.error(request, _COMPLETE_ERRORS.get(str(exc), str(exc)))
+    else:
+        messages.success(request, f"บันทึกการจอง {_booking_code(booking)} เป็นเสร็จสิ้นแล้ว")
 
     return redirect(_bookings_url(booking.date))
 

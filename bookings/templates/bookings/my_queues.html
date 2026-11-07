@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}My Q | Mahamongkol{% endblock %}
 {% block page_css %}
-<link rel="stylesheet" href="{% static 'bookings/css/my_queues.css' %}?v=20261026">{% endblock %}
+<link rel="stylesheet" href="{% static 'bookings/css/my_queues.css' %}?v=20261107">{% endblock %}
 {% block body_class %}queues-page{% endblock %}
 {% block content %}
 <main class="queues-shell">
@@ -15,26 +15,42 @@
     </div>
   </section>
   <section class="queues-content">
-    <div class="queues-tabs"><span class="is-active">Upcoming <b>{{ bookings|length }}</b></span><a
-        href="{% url 'restaurants' %}">Find a place <span>→</span></a></div>
+    <div class="queues-tabs">
+      <nav class="queues-tabs__list" aria-label="Booking status">{% for tab in tabs %}<a
+          class="{% if tab.key == active_tab %}is-active{% endif %}" href="{% url 'my_queues' %}?tab={{ tab.key }}"
+          {% if tab.key == active_tab %}aria-current="page"{% endif %}>{{ tab.label }} <b>{{ tab.count }}</b></a>{% endfor %}</nav>
+      <a class="queues-tabs__find" href="{% url 'restaurants' %}">Find a place <span>→</span></a></div>
     {% if bookings %}<div class="queue-list">{% for booking in bookings %}<article class="queue-card">
         <div class="queue-card__image" style="background-image:url('{{ booking.image }}')"></div>
         <div class="queue-card__main">
           <div class="queue-card__top">
             <div>
-              <p class="eyebrow">TABLE RESERVATION</p>
+              <p class="eyebrow">TABLE RESERVATION · {{ booking.code }}</p>
               <h2>{{ booking.restaurant }}</h2>
-            </div><span class="queue-status"><i></i>{{ booking.get_status_display }}</span>
+            </div><span class="queue-status queue-status--{{ booking.status }}"><i></i>{{ booking.get_status_display }}</span>
           </div>
           <div class="queue-card__details">
             <span>▦ {{ booking.date|date:"Y-m-d" }}</span>
             <span>◷ {{ booking.time|time:"H:i" }}</span>
             <span>♙ {{ booking.guests }} guest{{ booking.guests|pluralize }}</span>
+            <span>▣ Table {{ booking.table.name }}</span>
           </div>
-          <div class="queue-card__actions"><a href="{% url 'restaurant_detail' booking.slug %}">View place</a><a
-              class="queue-card__cancel" href="{% url 'cancel_booking' booking.id %}">Cancel booking</a></div>
+          <div class="queue-card__actions"><a href="{% url 'restaurant_detail' booking.slug %}">View place</a>{% if booking.is_confirmed %}<a
+              class="queue-card__cancel" href="{% url 'cancel_booking' booking.id %}">Cancel booking</a>{% endif %}</div>
         </div>
       </article>{% endfor %}</div>
+    {% elif active_tab == 'past' %}<div class="queue-empty"><span class="queue-empty__icon">▣</span>
+      <p class="eyebrow">NO PAST VISITS YET</p>
+      <h2>Your completed bookings<br>will show up here.</h2>
+      <p>Once a reservation is completed or missed, it is kept here as part of your history.</p><a
+        class="button button--primary" href="{% url 'restaurants' %}">Explore places <span>→</span></a>
+    </div>
+    {% elif active_tab == 'cancelled' %}<div class="queue-empty"><span class="queue-empty__icon">▣</span>
+      <p class="eyebrow">NOTHING CANCELLED</p>
+      <h2>You have no cancelled<br>bookings.</h2>
+      <p>Bookings you cancel stay here so you can always look back at them.</p><a class="button button--primary"
+        href="{% url 'my_queues' %}">Back to upcoming <span>→</span></a>
+    </div>
     {% else %}<div class="queue-empty"><span class="queue-empty__icon">▣</span>
       <p class="eyebrow">NOTHING ON THE CALENDAR</p>
       <h2>Your next favourite moment<br>is waiting to be booked.</h2>

@@ -12,3 +12,7 @@
 .queue-empty__icon { color: var(--gold-light); background: var(--green); }
 @media (max-width: 900px) { .queues-content { width: min(100% - 48px, 720px); } }
 @media (max-width: 620px) { .queues-content { width: calc(100% - 36px); }.queue-empty { padding: 50px 18px; } }
+
+.queues-tabs__list { display: flex; gap: 26px; }.queues-tabs__list a { padding: 0 0 13px; border-bottom: 2px solid transparent; color: #77766e; font-size: .85rem; font-weight: 700; }.queues-tabs__list a.is-active { border-bottom-color: var(--green); color: var(--green); }.queues-tabs__list a:hover { color: var(--green); }.queues-tabs__find { padding-bottom: 13px; color: var(--green); font-size: .79rem; font-weight: 700; }.queues-tabs__find span { margin-left: 8px; }
+.queue-status--completed { color: #28694e; background: #e8f3eb; }.queue-status--no_show { color: #8a6417; background: #f7ecd0; }.queue-status--no_show i { background: #c4952f; }.queue-status--cancelled { color: #a25042; background: #f8e4df; }.queue-status--cancelled i { background: #c4665a; }.queue-status--completed i { background: #369263; }
+@media (max-width: 620px) { .queues-tabs { flex-wrap: wrap; gap: 8px; }.queues-tabs__list { gap: 18px; overflow-x: auto; } }

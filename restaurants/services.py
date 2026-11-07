@@ -12,7 +12,17 @@ MAX_SLUG_ATTEMPTS = 20
 # field ที่เจ้าของแก้ได้ผ่านฟอร์ม (ไม่รวม owner, slug, status, is_open, rating, reviews)
 EDITABLE_FIELDS = (
     "name", "category", "price", "address", "hours", "image", "description",
+    "no_show_grace_minutes",
 )
+
+
+def _field_values(data):
+    """ค่าจากฟอร์มที่จะบันทึก ช่องตัวเลขที่เว้นว่าง (None) ให้ข้ามเพื่อคงค่าเดิม/ค่าเริ่มต้น"""
+    return {
+        f: data[f]
+        for f in EDITABLE_FIELDS
+        if f in data and not (f == "no_show_grace_minutes" and data[f] is None)
+    }
 
 
 class RestaurantError(Exception):
@@ -58,7 +68,7 @@ def create_restaurant(owner, data, *, extra_details=(), table_count=None, seats=
                     slug=slug,
                     status=Restaurant.Status.DRAFT,
                     extra_details=list(extra_details),
-                    **{f: data[f] for f in EDITABLE_FIELDS if f in data},
+                    **_field_values(data),
                 )
                 Table.objects.bulk_create(
                     Table(restaurant=restaurant, name=f"T{i}", capacity=seats)
@@ -81,9 +91,8 @@ def managed_restaurants(user):
 def update_restaurant(restaurant, by_user, data, *, extra_details=None):
     """แก้ข้อมูลร้าน ไม่เปลี่ยน slug เพื่อไม่ให้ลิงก์เดิมของลูกค้าเสีย"""
     _require_manage(by_user, restaurant)
-    for field in EDITABLE_FIELDS:
-        if field in data:
-            setattr(restaurant, field, data[field])
+    for field, value in _field_values(data).items():
+        setattr(restaurant, field, value)
     if extra_details is not None:
         restaurant.extra_details = list(extra_details)
     restaurant.save()

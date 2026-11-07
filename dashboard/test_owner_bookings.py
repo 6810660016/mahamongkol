@@ -66,8 +66,10 @@ class OwnerBookingsPageTests(TestCase):
             self.assertNotContains(response, text)
 
     def test_owner_sees_own_bookings_for_the_day(self):
-        mine = self.book(self.table, guests=3)
-        response = self.get_page()
+        # Tomorrow, so the grace period can never turn it into a no-show mid-test.
+        tomorrow = self.today + timedelta(days=1)
+        mine = self.book(self.table, day=tomorrow, guests=3)
+        response = self.get_page(date=tomorrow.isoformat())
         data = bookings_in(response)
         self.assertEqual(len(data), 1)
         self.assertEqual(
@@ -79,7 +81,10 @@ class OwnerBookingsPageTests(TestCase):
                 "party": 3,
                 "table": "T1",
                 "status": "confirmed",
+                "canCancel": True,
+                "canComplete": False,  # not due yet: it is tomorrow
                 "cancelUrl": reverse("owner_booking_cancel", args=[mine.id]),
+                "completeUrl": reverse("owner_booking_complete", args=[mine.id]),
             },
         )
         self.assertContains(response, reverse("owner_queue"))
