@@ -105,7 +105,12 @@ def owner_overview_view(request):
 
 @owner_ui_required
 def owner_store_details_view(request):
-    return render(request, "dashboard/owner_store_details.html")
+    restaurant = Restaurant.objects.filter(owner=request.user).first()
+    return render(
+        request,
+        "dashboard/owner_store_details.html",
+        {"restaurant": restaurant},
+    )
 
 
 @owner_ui_required
