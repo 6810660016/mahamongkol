@@ -1,2 +1,9 @@
+[lint]
+select = ["E4", "E7", "E9", "F", "I", "N", "RUF", "DTZ", "BLE"]
+# An en dash is intentional in opening-hour display strings.
+allowed-confusables = ["–"]
+
 [lint.per-file-ignores]
 "*/migrations/*.py" = ["RUF012"]
+# Keep the existing Django project package name and import paths.
+"MongkolQ/__init__.py" = ["N999"]

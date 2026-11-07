@@ -81,6 +81,17 @@ python manage.py createsuperuser
 
 ## รันเทส
 
+CI และการวัด coverage (ต้องผ่านอย่างน้อย 80%):
+ดู [CI and test coverage](docs/ci-and-coverage.md) สำหรับ Python 3.13,
+คำสั่งตรวจ Ruff/coverage และวิธีตั้ง required status check บน `main` โดย admin
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m ruff check .
+python -m coverage run manage.py test --noinput --settings=MongkolQ.test_settings
+python -m coverage report --fail-under=80
+```
+
 ```bash
 python manage.py test
 ```

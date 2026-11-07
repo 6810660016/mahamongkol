@@ -1,12 +1,12 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 User = get_user_model()
 
-from django.urls import reverse
 class BookingFlowTests(TestCase):
     def setUp(self):
         self.customer = User.objects.create_user(
@@ -34,7 +34,7 @@ class BookingFlowTests(TestCase):
         response = self.client.post(
             reverse('booking', args=['salvia']),
             {
-                'date': (date.today() + timedelta(days=1)).isoformat(),
+                'date': (timezone.localdate() + timedelta(days=1)).isoformat(),
                 'time': '19:00',
                 'guests': '2',
             },
@@ -55,7 +55,7 @@ class BookingFlowTests(TestCase):
         response = self.client.post(
             reverse('booking', args=['salvia']),
             {
-                'date': (date.today() + timedelta(days=1)).isoformat(),
+                'date': (timezone.localdate() + timedelta(days=1)).isoformat(),
                 'time': '03:00',
                 'guests': '2',
             },
@@ -109,7 +109,7 @@ class BookingFlowTests(TestCase):
         self.assertContains(response, reverse('my_queues'))
 
     def test_cancel_page_shows_booking_date(self):
-        booking_date = (date.today() + timedelta(days=1)).isoformat()
+        booking_date = (timezone.localdate() + timedelta(days=1)).isoformat()
         self.client.post(
             reverse('booking', args=['salvia']),
             {'date': booking_date, 'time': '19:00', 'guests': '2'},

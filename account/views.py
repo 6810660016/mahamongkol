@@ -1,5 +1,6 @@
 import secrets
 import time
+from smtplib import SMTPException
 
 from django.conf import settings
 from django.contrib import messages
@@ -112,7 +113,7 @@ def password_reset_view(request):
         if user:
             try:
                 _create_and_send_otp(request, user.email)
-            except Exception:
+            except (SMTPException, OSError):
                 _clear_password_reset_session(request)
                 error = "ส่งอีเมลไม่สำเร็จ กรุณาตรวจสอบการตั้งค่าอีเมลแล้วลองอีกครั้ง"
                 return render(request, "account/password_reset_form.html", {"form": form, "error": error})
@@ -144,7 +145,7 @@ def password_reset_verify_view(request):
                 if user:
                     try:
                         _create_and_send_otp(request, user.email)
-                    except Exception:
+                    except (SMTPException, OSError):
                         error = "ส่งอีเมลไม่สำเร็จ กรุณาลองอีกครั้ง"
                 else:
                     request.session["password_reset_otp_sent"] = int(time.time())
