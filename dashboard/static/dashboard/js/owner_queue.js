@@ -1,25 +1,18 @@
 (() => {
   "use strict";
 
-  // The owner dashboard is a mockup. Nothing here reads or writes real bookings.
+  // Owner queue page. All state lives on the server (queues app); this page
+  // renders the latest snapshot and refreshes it every few seconds.
   const root = document.querySelector(".queue-app");
   if (!root) return;
   const $ = (selector) => document.querySelector(selector);
-  const ago = (minutes) => Date.now() - minutes * 60000;
-  let nextNumber = 13;
-  let paused = false;
-  let current = { number: 8, source: "Booking", party: 4, name: "", joinedAt: ago(25) };
-  let waiting = [
-    { number: 9, source: "Booking", party: 2, name: "", joinedAt: ago(20) },
-    { number: 10, source: "Walk-in", party: 4, name: "", joinedAt: ago(15) },
-    { number: 11, source: "Booking", party: 3, name: "", joinedAt: ago(10) },
-    { number: 12, source: "Walk-in", party: 5, name: "", joinedAt: ago(5) },
-    { number: 13, source: "Booking", party: 2, name: "", joinedAt: ago(1) },
-  ];
-  let skipped = [{ number: 7, source: "Walk-in", party: 2, name: "", joinedAt: ago(30) }];
-  let completed = 0;
+  const POLL_MS = 4000;
+  let state = { queueEnabled: true, paused: false, current: null, waiting: [], skipped: [], completed: 0 };
   let toastTimer;
-  const number = (entry) => `Q${String(entry.number).padStart(3, "0")}`;
+  let busy = false;
+  const queueEnabled = () => state.queueEnabled !== false && root.dataset.queueEnabled !== "0";
+
+  const number = (entry) => entry.code;
   const partyText = (count) => `${count} ${count === 1 ? "guest" : "guests"}`;
   const waitingTime = (entry) => `${Math.max(0, Math.floor((Date.now() - entry.joinedAt) / 60000))} min`;
 
@@ -38,15 +31,49 @@
     return element;
   }
 
-  function advance() {
-    current = waiting.shift() || null;
-    if (current) current.priority = false;
+  async function request(url, options = {}) {
+    const response = await fetch(url, {
+      credentials: "same-origin",
+      headers: { "X-CSRFToken": root.dataset.csrf },
+      ...options,
+    });
+    let data = {};
+    try { data = await response.json(); } catch (error) { /* not JSON, e.g. a redirect to sign-in */ }
+    if (!response.ok && !data.error) data.error = "Something went wrong. Please reload the page.";
+    return data;
+  }
+
+  function apply(data) {
+    if (data && Array.isArray(data.waiting)) state = data;
+    render();
+  }
+
+  async function act(url, body, { silent = false } = {}) {
+    if (busy) return;
+    busy = true;
+    try {
+      const data = await request(url, { method: "POST", body: new URLSearchParams(body || {}) });
+      apply(data);
+      if (data.error) announce(data.error);
+      else if (data.message && !silent) announce(data.message);
+      return data;
+    } catch (error) {
+      announce("Could not reach the server. Try again.");
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function refresh() {
+    if (busy || document.hidden || root.dataset.hasStore !== "1") return;
+    try { apply(await request(root.dataset.urlData)); } catch (error) { /* keep the last snapshot */ }
   }
 
   function render() {
+    const { current, waiting, skipped } = state;
     $("[data-stat-waiting]").textContent = waiting.length;
     $("[data-stat-current]").textContent = current ? number(current) : "—";
-    $("[data-stat-completed]").textContent = completed;
+    $("[data-stat-completed]").textContent = state.completed;
     $("[data-stat-skipped]").textContent = skipped.length;
     const averageWait = waiting.length ? Math.round(waiting.reduce((sum, entry) => sum + Math.max(0, Date.now() - entry.joinedAt), 0) / waiting.length / 60000) : 0;
     $("[data-stat-average]").textContent = `${averageWait} min`;
@@ -65,7 +92,7 @@
     const rows = waiting.map((entry) => {
       const row = document.createElement("tr");
       row.append(makeElement("td", "queue-table__number", number(entry)));
-      row.append(makeElement("td", "", entry.source));
+      row.append(makeElement("td", "", `${entry.source}${entry.name ? ` · ${entry.name}` : ""}`));
       row.append(makeElement("td", "", partyText(entry.party)));
       row.append(makeElement("td", "", waitingTime(entry)));
       const status = document.createElement("td");
@@ -83,59 +110,43 @@
       const button = makeElement("button", "", "Recall next ↗");
       button.type = "button";
       button.setAttribute("aria-label", `Recall ${number(entry)} as the next queue`);
-      button.addEventListener("click", () => {
-        skipped = skipped.filter((item) => item.number !== entry.number);
-        entry.priority = true;
-        waiting.unshift(entry);
-        if (!current) advance();
-        render();
-        announce(current && current.number === entry.number ? `${number(entry)} is now being served in this preview.` : `${number(entry)} will be called after the current queue.`);
-      });
+      button.addEventListener("click", () => act(root.dataset.urlRecall.replace(/0\/recall\/$/, `${entry.id}/recall/`)));
       row.append(details, button);
       return row;
     });
     $("[data-skipped-list]").replaceChildren(...skippedRows);
     $("[data-skipped-empty]").hidden = skipped.length > 0;
-    $("[data-toggle-pause]").textContent = paused ? "▶  Resume new queues" : "Ⅱ  Pause new queues";
-    document.querySelectorAll("[data-open-add]").forEach((button) => { button.disabled = paused; });
+    $("[data-toggle-pause]").textContent = state.paused ? "▶  Resume new queues" : "Ⅱ  Pause new queues";
+    document.querySelectorAll("[data-open-add]").forEach((button) => { button.disabled = state.paused || !queueEnabled(); });
   }
 
-  $("[data-call-again]").addEventListener("click", () => { if (current) announce(`Calling ${number(current)} again in this preview.`); });
-  $("[data-complete]").addEventListener("click", () => {
-    if (!current) return;
-    const previous = number(current);
-    completed += 1;
-    advance();
-    render();
-    announce(`${previous} completed. ${current ? `${number(current)} is now being served.` : "No queues are waiting."}`);
-  });
-  $("[data-skip]").addEventListener("click", () => {
-    if (!current) return;
-    const previous = number(current);
-    skipped.push(current);
-    advance();
-    render();
-    announce(`${previous} skipped. ${current ? `${number(current)} is now being served.` : "No queues are waiting."}`);
-  });
-  $("[data-call-next]").addEventListener("click", () => { if (!current && waiting.length) { advance(); render(); announce(`${number(current)} is now being served.`); } });
-  $("[data-toggle-pause]").addEventListener("click", () => { paused = !paused; render(); announce(paused ? "New sample queues are paused." : "New sample queues are open."); });
+  $("[data-call-again]").addEventListener("click", () => act(root.dataset.urlCallAgain));
+  $("[data-complete]").addEventListener("click", () => act(root.dataset.urlComplete));
+  $("[data-skip]").addEventListener("click", () => act(root.dataset.urlSkip));
+  $("[data-call-next]").addEventListener("click", () => act(root.dataset.urlCallNext));
+  $("[data-toggle-pause]").addEventListener("click", () => act(root.dataset.urlPause, { paused: state.paused ? "0" : "1" }));
 
   const dialog = $("[data-add-dialog]");
   const form = $("[data-add-form]");
-  document.querySelectorAll("[data-open-add]").forEach((button) => button.addEventListener("click", () => { if (!paused) dialog.showModal(); }));
+  document.querySelectorAll("[data-open-add]").forEach((button) => button.addEventListener("click", async () => {
+    if (state.paused || !queueEnabled()) return;
+    dialog.showModal();
+  }));
   document.querySelectorAll("[data-close-add]").forEach((button) => button.addEventListener("click", () => dialog.close()));
   dialog.addEventListener("close", () => form.reset());
   dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (paused || !form.reportValidity()) return;
+    if (state.paused || !queueEnabled() || !form.reportValidity()) return;
     const fields = new FormData(form);
-    const entry = { number: ++nextNumber, source: fields.get("source"), name: fields.get("name").trim(), party: Number(fields.get("party")), joinedAt: Date.now() };
-    waiting.push(entry);
-    dialog.close();
-    render();
-    announce(`${number(entry)} added to the preview as a ${entry.source.toLowerCase()} queue.`);
+    const body = { name: (fields.get("name") || "").trim(), party: fields.get("party") };
+    const data = await act(root.dataset.urlAdd, body);
+    if (data && !data.error) dialog.close();
   });
+
   render();
+  refresh();
+  setInterval(refresh, POLL_MS);
   setInterval(render, 60000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
 })();
