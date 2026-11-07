@@ -21,6 +21,11 @@ class Restaurant(models.Model):
         DRAFT = "draft", "Draft"
         PUBLISHED = "published", "Published"
         
+    class ServiceMode(models.TextChoices):
+        BOTH = "both", "Bookings and queue"
+        BOOKING = "booking", "Bookings only"
+        QUEUE = "queue", "Queue only"
+
     # หนึ่งบัญชีเจ้าของมีได้ 1 ร้าน (ร้านที่ไม่มีเจ้าของ เช่น ร้าน seed เป็น NULL ได้หลายร้าน)
     owner = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -35,6 +40,10 @@ class Restaurant(models.Model):
     category = models.CharField(max_length=20, choices=Category.choices, default=Category.RESTAURANT)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PUBLISHED)
     is_open = models.BooleanField(default=True)
+    # How guests can get a place: reserve a table in advance, join the line, or both.
+    service_mode = models.CharField(
+        max_length=10, choices=ServiceMode.choices, default=ServiceMode.BOTH
+    )
     extra_details = models.JSONField(default=list, blank=True)
     rating = models.DecimalField(max_digits=2, decimal_places=1, default=0)
     reviews = models.PositiveIntegerField(default=0)
@@ -52,6 +61,14 @@ class Restaurant(models.Model):
 
     class Meta:
         ordering = ("id",)
+
+    @property
+    def accepts_bookings(self):
+        return self.service_mode in (self.ServiceMode.BOTH, self.ServiceMode.BOOKING)
+
+    @property
+    def accepts_queue(self):
+        return self.service_mode in (self.ServiceMode.BOTH, self.ServiceMode.QUEUE)
 
     def __str__(self):
         return self.name

@@ -35,9 +35,15 @@ class RestaurantForm(forms.ModelForm):
             "hours",
             "image",
             "description",
+            "service_mode",
         )
         # ไม่ใส่ owner, slug, status, is_open, rating, reviews:
         # เจ้าของตั้งเองจากฟอร์มไม่ได้ ระบบกำหนดเอง
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Older forms/clients may not send it: then the store keeps its current mode.
+        self.fields["service_mode"].required = False
 
     def clean_name(self):
         name = self.cleaned_data["name"].strip()
@@ -53,6 +59,8 @@ class RestaurantForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        if not cleaned.get("service_mode"):
+            cleaned.pop("service_mode", None)
         keys = self.data.getlist("extra_key")
         values = self.data.getlist("extra_value")
         cleaned["extras"] = [

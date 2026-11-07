@@ -9,7 +9,6 @@ from django.views.decorators.http import require_POST
 
 from account.decorators import customer_ui_required, owner_ui_required
 from account.ui import get_landing_url_name
-
 from bookings import services as booking_services
 from bookings.models import Booking
 from restaurants import services
@@ -71,6 +70,7 @@ def owner_dashboard_view(request):
             "description": store.description,
             "status": store.status,
             "isOpen": store.is_open,
+            "serviceMode": store.service_mode,
             "extras": store.extra_details,
             "urls": {
                 "edit": reverse(
@@ -213,8 +213,9 @@ def owner_booking_complete_view(request, booking_id):
 
 @owner_ui_required
 def owner_queue_view(request):
-    """Queue management mockup; data stays in the current browser page."""
-    return render(request, "dashboard/owner_queue.html")
+    """Queue management page; the live data comes from the queues JSON endpoints."""
+    restaurant = Restaurant.objects.filter(owner=request.user).first()
+    return render(request, "dashboard/owner_queue.html", {"restaurant": restaurant})
 
 
 def _form_error_message(form):

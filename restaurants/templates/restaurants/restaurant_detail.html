@@ -3,7 +3,8 @@
 {% block title %}{{ restaurant.name }} | Mahamongkol{% endblock %}
 {% block page_css %}
 <link rel="stylesheet" href="{% static 'restaurants/css/restaurant_detail.css' %}?v=2">
-<link rel="stylesheet" href="{% static 'restaurants/css/restaurant_reviews.css' %}?v=2">{% endblock %}
+<link rel="stylesheet" href="{% static 'restaurants/css/restaurant_reviews.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'queues/css/join_queue.css' %}">{% endblock %}
 {% block page_js %}<script src="{% static 'restaurants/js/restaurant_reviews.js' %}" defer></script>{% endblock %}
 {% block body_class %}restaurant-detail-page{% endblock %}
 {% block content %}
@@ -46,14 +47,31 @@
     </div>
 
   <aside class="booking-card">
+  {% if restaurant.accepts_bookings %}
   <p class="eyebrow">YOUR TABLE AWAITS</p>
   <h2>Make a reservation</h2>
   <p class="booking-card__copy">Choose a time that works for you. We’ll take care of the rest.</p>
+  {% else %}
+  <p class="eyebrow">NO RESERVATIONS NEEDED</p>
+  <h2>Join the queue</h2>
+  <p class="booking-card__copy">This place seats guests as they arrive. Take a number and follow your place in line.</p>
+  {% endif %}
   {% if restaurant.reviews %}<div class="booking-card__rating"><span>★ {{ restaurant.rating }}</span><span>{{ restaurant.reviews }} guest
     reviews</span></div>{% endif %}
   {% if restaurant.is_open %}
+  {% if restaurant.accepts_bookings %}
   <a class="button button--primary button--full" href="{% url 'booking' restaurant.slug %}">Book a table <span>→</span></a>
   <p class="booking-card__note">Free cancellation · Instant confirmation</p>
+  {% endif %}
+  {% if restaurant.accepts_queue %}
+  <form class="join-queue{% if not restaurant.accepts_bookings %} join-queue--only{% endif %}" method="post" action="{% url 'queue_join' restaurant.slug %}">{% csrf_token %}
+    {% if restaurant.accepts_bookings %}<p class="eyebrow">AT THE DOOR?</p>
+    <h3>Join the queue now</h3>{% endif %}
+    <p class="booking-card__note">Take a number and watch your place in line live.</p>
+    <label>Party size <input type="number" name="party" min="1" max="20" value="2" required></label>
+    <button class="button button--full join-queue__button" type="submit">Join the queue <span>→</span></button>
+  </form>
+  {% endif %}
   {% else %}
   <p class="booking-card__note">ร้านนี้ปิดรับจองชั่วคราว</p>
   {% endif %}

@@ -2,7 +2,8 @@
 {% load static %}
 {% block title %}My Q | Mahamongkol{% endblock %}
 {% block page_css %}
-<link rel="stylesheet" href="{% static 'bookings/css/my_queues.css' %}?v=20261107">{% endblock %}
+<link rel="stylesheet" href="{% static 'bookings/css/my_queues.css' %}?v=20261107"><link rel="stylesheet" href="{% static 'queues/css/live_queue.css' %}">{% endblock %}
+{% block page_js %}<script src="{% static 'queues/js/live_queue.js' %}" defer></script>{% endblock %}
 {% block body_class %}queues-page{% endblock %}
 {% block content %}
 <main class="queues-shell">
@@ -15,6 +16,7 @@
     </div>
   </section>
   <section class="queues-content">
+    {% include 'queues/partials/live_queue.html' %}
     <div class="queues-tabs">
       <nav class="queues-tabs__list" aria-label="Booking status">{% for tab in tabs %}<a
           class="{% if tab.key == active_tab %}is-active{% endif %}" href="{% url 'my_queues' %}?tab={{ tab.key }}"

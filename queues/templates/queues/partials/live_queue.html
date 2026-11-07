@@ -1,0 +1,7 @@
+{% for message in messages %}<div class="live-queue__message live-queue__message--{{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+<section class="live-queue" data-live-queue data-csrf="{{ csrf_token }}"
+  data-url-data="{% url 'my_queue_data' %}" data-url-leave="{% url 'queue_leave' 0 %}" hidden>
+  <p class="eyebrow">LIVE QUEUE</p>
+  <div class="live-queue__list" data-live-queue-list></div>
+  <p class="live-queue__error" data-live-queue-error role="alert" hidden></p>
+</section>

@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  const serviceModeLabels = { both: "Bookings + queue", booking: "Bookings only", queue: "Queue only" };
+
   // Stores come from the server (json_script in the template).
   const stores = JSON.parse(document.getElementById("stores-data").textContent);
 
@@ -61,7 +63,7 @@
           <span class="owner-store-card__status owner-store-card__status--${statusClass}">${formatStatus(store)}</span>
         </div>
         <div class="owner-store-card__body">
-          <div class="owner-store-card__meta"><span class="owner-store-card__category">${escapeHTML(store.category)}</span><span>${escapeHTML(store.price || "Price not set")}</span></div>
+          <div class="owner-store-card__meta"><span class="owner-store-card__category">${escapeHTML(store.category)}</span><span>${escapeHTML(store.price || "Price not set")}</span><span>${escapeHTML(serviceModeLabels[store.serviceMode] || serviceModeLabels.both)}</span></div>
           <h3 title="${escapeHTML(store.name)}">${escapeHTML(store.name)}</h3>
           <p class="owner-store-card__address">⌖ ${escapeHTML(store.address || "Address not provided")}</p>
           <p class="owner-store-card__description">${escapeHTML(store.description || "No description added.")}</p>${extra}
@@ -124,6 +126,7 @@
       form.elements.name.value = store.name;
       form.elements.category.value = store.category;
       form.elements.price.value = store.price || "";
+      form.elements.service_mode.value = store.serviceMode || "both";
       form.elements.address.value = store.address || "";
       form.elements.hours.value = store.hours || "";
       form.elements.no_show_grace_minutes.value = store.noShowGraceMinutes ?? 30;

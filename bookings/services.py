@@ -72,7 +72,9 @@ def create_booking(user, restaurant, day, slot_value, guests):
     """Reserve the smallest free table that fits the party."""
     if restaurant.status != Restaurant.Status.PUBLISHED or not restaurant.is_open:
         raise BookingError("ร้านนี้ปิดรับจองชั่วคราว")
-    
+    if not restaurant.accepts_bookings:
+        raise BookingError("This restaurant does not take table bookings. Join the queue instead.")
+
     slot = parse_slot(slot_value)
     earliest, latest = booking_window()
     if slot is None or day < earliest or not 1 <= guests <= MAX_GUESTS:

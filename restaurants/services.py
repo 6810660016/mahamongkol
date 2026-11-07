@@ -13,6 +13,7 @@ MAX_SLUG_ATTEMPTS = 20
 EDITABLE_FIELDS = (
     "name", "category", "price", "address", "hours", "image", "description",
     "no_show_grace_minutes",
+    "service_mode",
 )
 
 

@@ -28,10 +28,11 @@ class OwnerPreviewTests(TestCase):
         self.assertContains(response, "Switch to customer")
         self.assertContains(response, reverse("owner_queue"))
 
-    def test_queue_mockup_is_available_to_owner(self):
+    def test_queue_page_is_available_to_owner(self):
         response = self.client.get(reverse("owner_queue"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "not connected to real bookings or walk-ins")
+        self.assertNotContains(response, "not connected to real bookings")
+        self.assertContains(response, reverse("owner_queue_data"))
         self.assertContains(response, "Skipped queues")
 
     def test_new_owner_mockup_pages_are_available_and_marked_as_sample(self):

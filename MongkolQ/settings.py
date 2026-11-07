@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "account",
     "restaurants",
     "bookings",
+    "queues",
     "dashboard",
 ]
 

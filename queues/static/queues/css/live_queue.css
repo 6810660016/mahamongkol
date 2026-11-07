@@ -1,0 +1,14 @@
+.live-queue { margin-bottom: 28px; }
+.live-queue__list { display: grid; gap: 16px; }
+.live-queue-card { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 22px 26px; border-radius: 13px; background: var(--green, #1f3a2b); color: var(--white, #fff); box-shadow: 0 12px 26px rgba(49,41,25,.12); }
+.live-queue-card h2 { margin: 2px 0 6px; font-size: 1.35rem; }
+.live-queue-card p { margin: 0; opacity: .85; }
+.live-queue-card__number { font-size: 2.6rem; font-weight: 700; line-height: 1; text-align: right; }
+.live-queue-card__number small { display: block; margin-top: 6px; font-size: .75rem; font-weight: 400; letter-spacing: .08em; opacity: .8; }
+.live-queue-card--called { outline: 3px solid var(--gold-light, #d9b45b); }
+.live-queue-card__actions { grid-column: 1 / -1; display: flex; gap: 12px; flex-wrap: wrap; }
+.live-queue-card__actions a, .live-queue-card__actions button { padding: 8px 14px; border: 1px solid rgba(255,255,255,.5); border-radius: 8px; background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: none; }
+.live-queue__message { margin-bottom: 14px; padding: 12px 16px; border-radius: 10px; background: #eef5ee; }
+.live-queue__message--error, .live-queue__error { background: #fbeaea; color: #8a1f1f; }
+.live-queue__error { padding: 12px 16px; border-radius: 10px; }
+@media (max-width: 620px) { .live-queue-card { grid-template-columns: 1fr; }.live-queue-card__number { text-align: left; } }

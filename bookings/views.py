@@ -19,6 +19,8 @@ from .permissions import manager_required
 @customer_ui_required
 def booking_view(request, slug):
     restaurant = get_object_or_404(Restaurant.objects.published(), slug=slug)
+    if not restaurant.accepts_bookings:
+        return redirect("restaurant_detail", slug=restaurant.slug)
     error = ""
     if request.method == "POST":
         try:
