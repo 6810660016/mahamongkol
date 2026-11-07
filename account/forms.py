@@ -1,7 +1,8 @@
+from typing import ClassVar
+
 from django import forms
 from django.contrib.auth import password_validation
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.forms import SetPasswordForm, UserCreationForm
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
@@ -49,7 +50,7 @@ class NewPasswordForm(SetPasswordForm):
 
 
 class SignupForm(UserCreationForm):
-    error_messages = {
+    error_messages: ClassVar = {
         "password_mismatch": "รหัสผ่านทั้งสองช่องไม่ตรงกัน",
     }
 
@@ -65,10 +66,10 @@ class SignupForm(UserCreationForm):
         model = User
         # Public registration always starts with customer access.
         fields = ("username", "email")
-        labels = {
+        labels: ClassVar = {
             "username": "ชื่อผู้ใช้",
         }
-        error_messages = {
+        error_messages: ClassVar = {
             "username": {
                 "required": "กรุณากรอกชื่อผู้ใช้",
                 "unique": "ชื่อผู้ใช้นี้ถูกใช้แล้ว",
@@ -127,8 +128,8 @@ class OwnerApplicationForm(forms.ModelForm):
     class Meta:
         model = OwnerApplication
         fields = ("contact_name", "business_name")
-        labels = {"contact_name": "Contact name", "business_name": "Business name"}
-        widgets = {
+        labels: ClassVar = {"contact_name": "Contact name", "business_name": "Business name"}
+        widgets: ClassVar = {
             "contact_name": forms.TextInput(attrs={"autocomplete": "name", "placeholder": "Your full name"}),
             "business_name": forms.TextInput(attrs={"placeholder": "Your business or store name"}),
         }

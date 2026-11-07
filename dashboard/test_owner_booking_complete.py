@@ -211,7 +211,7 @@ class OwnerBookingsPageStatusTests(CompleteTestBase):
 
     def test_reserved_count_is_computed_from_confirmed_and_completed(self):
         js = (settings.BASE_DIR / "dashboard/static/dashboard/js/owner_bookings.js").read_text(encoding="utf-8")
-        line = next(l for l in js.splitlines() if "data-summary-reserved" in l)
+        line = next(line for line in js.splitlines() if "data-summary-reserved" in line)
         self.assertIn('item.status === "confirmed" || item.status === "completed"', line)
 
     def test_page_renders_csrf_protected_complete_form_and_filters(self):

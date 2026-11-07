@@ -7,10 +7,11 @@ from .models import User
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = ("username", "email", "role", "is_staff", "is_active")
-    list_filter = ("role",) + BaseUserAdmin.list_filter
+    list_filter = ("role", *BaseUserAdmin.list_filter)
 
     # หน้าแก้ไขผู้ใช้
-    fieldsets = BaseUserAdmin.fieldsets + (
+    fieldsets = (
+        *BaseUserAdmin.fieldsets,
         ("บทบาท", {"fields": ("role",)}),
     )
 

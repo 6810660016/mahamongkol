@@ -1,8 +1,9 @@
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
 from restaurants.models import Restaurant
 
@@ -11,7 +12,7 @@ from .models import Booking
 
 User = get_user_model()
 
-TOMORROW = date.today() + timedelta(days=1)
+TOMORROW = timezone.localdate() + timedelta(days=1)
 
 
 def make_user(username, role=User.Role.USER, **extra):
@@ -64,7 +65,7 @@ class CreateAndCancelTests(TestCase):
     def test_invalid_input_is_rejected(self):
         for payload in (
             {"date": "not-a-date", "time": "19:00", "guests": "2"},
-            {"date": (date.today() - timedelta(days=1)).isoformat(), "time": "19:00", "guests": "2"},
+            {"date": (timezone.localdate() - timedelta(days=1)).isoformat(), "time": "19:00", "guests": "2"},
             {"date": TOMORROW.isoformat(), "time": "03:00", "guests": "2"},
             {"date": TOMORROW.isoformat(), "time": "19:00", "guests": "0"},
             {"date": TOMORROW.isoformat(), "time": "19:00", "guests": "13"},

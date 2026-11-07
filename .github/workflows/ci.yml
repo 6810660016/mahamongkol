@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Ruff and Django tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DJANGO_SETTINGS_MODULE: MongkolQ.test_settings
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Ruff
+        run: python -m ruff check . --output-format=github
+      - name: Django system check
+        run: python manage.py check
+      - name: Test with coverage
+        run: python -m coverage run manage.py test --noinput
+      - name: Require at least 80 percent coverage
+        run: python -m coverage report --fail-under=80
+      - name: Export coverage reports
+        if: ${{ !cancelled() }}
+        run: |
+          python -m coverage xml --fail-under=0
+          python -m coverage html --fail-under=0
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+          if-no-files-found: ignore
