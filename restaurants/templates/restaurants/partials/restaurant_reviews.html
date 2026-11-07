@@ -1,0 +1,35 @@
+<section class="reviews" aria-labelledby="reviews-title" data-reviews>
+  <div class="reviews__heading">
+    <div><p class="eyebrow">WORDS THAT MATTER</p><h2 id="reviews-title">Guest reviews<span>.</span></h2><p>Share a little about your experience.</p></div>
+    <div class="reviews__score"><span aria-hidden="true">★</span> <strong>{{ restaurant.rating }}</strong><small>Sample rating · {{ restaurant.reviews }} reviews</small></div>
+  </div>
+  <div class="reviews__notice"><span aria-hidden="true">✦</span><p><strong>Review preview</strong> This demo simulates a completed visit. Reviews are temporary and are not shared or used to calculate the sample rating.</p></div>
+  <div class="reviews__layout">
+    <div class="reviews__content">
+      <div class="reviews__content-title"><h3>Your review</h3><span>PREVIEW</span></div>
+      <div class="reviews__empty" data-review-empty><span aria-hidden="true">✧</span><strong>Your experience, in your words.</strong><p>Your preview review will appear here after you submit it.</p></div>
+      <article class="review-entry" data-review-entry hidden>
+        <div class="review-entry__top"><span class="review-entry__avatar" aria-hidden="true">{{ request.user.username|first|upper }}</span><div><strong>{{ request.user.username }}</strong><small>Completed visit · simulated</small></div><span class="review-entry__date">Just now</span></div>
+        <div class="review-entry__stars" data-review-stars></div><p data-review-text></p>
+        <button type="button" class="review-entry__edit" data-edit-review>Edit review <span aria-hidden="true">→</span></button>
+      </article>
+    </div>
+    <form class="review-form" data-review-form>
+      <div class="review-form__intro"><span class="review-form__icon" aria-hidden="true">✦</span><div><h3>How was your visit?</h3><p>Tell us what made it memorable.</p></div></div>
+      <p class="review-form__eligibility"><span aria-hidden="true">✓</span> Simulated completed visit</p>
+      <fieldset class="review-form__rating"><legend>Your rating <span>*</span></legend><div class="review-form__stars">
+        <label><input type="radio" name="rating" value="1" required><span aria-hidden="true">★</span><span class="review-sr-only">1 star</span></label>
+        <label><input type="radio" name="rating" value="2"><span aria-hidden="true">★</span><span class="review-sr-only">2 stars</span></label>
+        <label><input type="radio" name="rating" value="3"><span aria-hidden="true">★</span><span class="review-sr-only">3 stars</span></label>
+        <label><input type="radio" name="rating" value="4"><span aria-hidden="true">★</span><span class="review-sr-only">4 stars</span></label>
+        <label><input type="radio" name="rating" value="5"><span aria-hidden="true">★</span><span class="review-sr-only">5 stars</span></label>
+      </div><small data-rating-label>Select a rating</small></fieldset>
+      <label class="review-form__label" for="review-message">Your review <span>Optional</span></label>
+      <textarea id="review-message" name="message" rows="4" maxlength="500" placeholder="What did you enjoy about your visit?"></textarea>
+      <div class="review-form__count"><span>Your feedback helps others discover great places.</span><span><span data-review-count>0</span>/500</span></div>
+      <button class="review-form__submit" type="submit">Post preview review <span aria-hidden="true">→</span></button>
+      <p class="review-form__footnote">Preview only · Resets when this page is refreshed</p>
+      <p class="review-form__status" role="status" data-review-status></p>
+    </form>
+  </div>
+</section>
