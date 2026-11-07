@@ -65,6 +65,37 @@
   // พิมพ์/เลือกใหม่ในช่องที่มี error ให้ล้าง error ของช่องนั้น
   form.addEventListener("input", (event) => { if (event.target.name) setError(event.target.name, ""); });
 
+  // Extra details: แถว key/value เพิ่ม-ลบได้ (เซิร์ฟเวอร์จำกัดจำนวนและความยาวซ้ำเสมอ)
+  // ใช้ createElement + .value ไม่ใช้ innerHTML กับข้อความที่ผู้ใช้พิมพ์
+  const extraList = form.querySelector("[data-extra-list]");
+  const addExtraButton = form.querySelector("[data-add-extra]");
+  const maxExtras = extraList ? parseInt(extraList.dataset.max, 10) || 10 : 0;
+  const noStoreYet = Boolean(addExtraButton && addExtraButton.disabled && extraList && !extraList.children.length);
+  const syncExtraButton = () => { if (addExtraButton) addExtraButton.disabled = noStoreYet || extraList.children.length >= maxExtras; };
+  function addExtraRow(key, value) {
+    const row = document.createElement("div");
+    row.className = "store-extra-row";
+    const keyInput = document.createElement("input");
+    keyInput.name = "extra_key"; keyInput.type = "text"; keyInput.maxLength = 60;
+    keyInput.placeholder = "e.g. Parking"; keyInput.setAttribute("aria-label", "Detail name"); keyInput.value = key || "";
+    const valueInput = document.createElement("input");
+    valueInput.name = "extra_value"; valueInput.type = "text"; valueInput.maxLength = 200;
+    valueInput.placeholder = "e.g. Available on site"; valueInput.setAttribute("aria-label", "Detail value"); valueInput.value = value || "";
+    const remove = document.createElement("button");
+    remove.type = "button"; remove.textContent = "×"; remove.setAttribute("data-remove-extra", ""); remove.setAttribute("aria-label", "Remove detail");
+    row.append(keyInput, valueInput, remove);
+    extraList.append(row);
+    syncExtraButton();
+    return keyInput;
+  }
+  if (extraList && addExtraButton) {
+    addExtraButton.addEventListener("click", () => { if (extraList.children.length < maxExtras) addExtraRow("", "").focus(); });
+    extraList.addEventListener("click", (event) => { const button = event.target.closest("[data-remove-extra]"); if (button) { button.closest(".store-extra-row").remove(); syncExtraButton(); } });
+    syncExtraButton();
+  }
+  // หลังบันทึกสำเร็จ: วาดแถวใหม่ตามที่เซิร์ฟเวอร์บันทึกจริง (แถวที่กรอกไม่ครบจะถูกตัดออก)
+  const renderExtras = (items) => { if (!extraList) return; extraList.replaceChildren(); items.forEach((item) => addExtraRow(item.key, item.value)); syncExtraButton(); };
+
   form.querySelector("[data-add-slot]").addEventListener("click", () => {
     const row = document.createElement("tr");
     row.innerHTML = '<td><input type="checkbox" checked aria-label="Slot available"></td><td><input type="time" value="14:00" aria-label="Slot time"></td><td><input type="number" value="4" min="1" max="100" aria-label="Tables"></td><td><button type="button" data-remove-slot aria-label="Remove slot">×</button></td>';
@@ -106,6 +137,7 @@
 
       if (response.ok && payload && payload.ok) {
         if (profile) profile.commit(payload.image_url);
+        if (Array.isArray(payload.extras)) renderExtras(payload.extras);
         const chip = document.querySelector("[data-store-name-chip]");
         if (chip && payload.name) chip.textContent = payload.name;
         announce(payload.message || "บันทึกเรียบร้อยแล้ว");

@@ -13,7 +13,7 @@ from account.ui import get_landing_url_name
 from bookings import services as booking_services
 from bookings.models import Booking
 from restaurants import services
-from restaurants.forms import PRICE_CHOICES, RestaurantForm
+from restaurants.forms import MAX_EXTRAS, PRICE_CHOICES, RestaurantForm
 from restaurants.models import Restaurant
 
 
@@ -106,7 +106,7 @@ def owner_overview_view(request):
 # ช่องข้อความ/ตัวเลือกบนหน้า Store Details (ชื่อ = name ของ input และชื่อ field ของ RestaurantForm)
 STORE_DETAIL_FIELDS = (
     "name", "category", "price", "service_mode", "address",
-    "phone", "hours", "map_url", "description",
+    "phone", "hours", "map_url", "description", "no_show_grace_minutes",
 )
 
 
@@ -121,7 +121,25 @@ def _store_values(restaurant):
     return {field: getattr(restaurant, field) for field in STORE_DETAIL_FIELDS}
 
 
-def _render_store_details(request, restaurant, *, values=None, errors=None):
+def _store_extras(restaurant):
+    """Extra details ที่บันทึกไว้ (list ของ {key, value}) สำหรับวาดแถวในหน้า"""
+    if restaurant is None:
+        return []
+    return list(restaurant.extra_details or [])
+
+
+def _posted_extras(request):
+    """แถว Extra details ตามที่ผู้ใช้พิมพ์ (ใช้วาดหน้าใหม่ตอนบันทึกไม่ผ่าน จึงเก็บแถวที่กรอกไม่ครบไว้ด้วย)"""
+    keys = request.POST.getlist("extra_key")
+    values = request.POST.getlist("extra_value")
+    return [
+        {"key": k, "value": v}
+        for k, v in zip(keys, values)
+        if k.strip() or v.strip()
+    ][:MAX_EXTRAS]
+
+
+def _render_store_details(request, restaurant, *, values=None, errors=None, extras=None):
     return render(
         request,
         "dashboard/owner_store_details.html",
@@ -129,6 +147,8 @@ def _render_store_details(request, restaurant, *, values=None, errors=None):
             "restaurant": restaurant,
             "values": _store_values(restaurant) if values is None else values,
             "errors": {f: " ".join(msgs) for f, msgs in (errors or {}).items()},
+            "extras": _store_extras(restaurant) if extras is None else extras,
+            "max_extras": MAX_EXTRAS,
             "category_choices": Restaurant.Category.choices,
             "price_choices": PRICE_CHOICES,
             "service_mode_choices": Restaurant.ServiceMode.choices,
@@ -155,6 +175,9 @@ def _save_store_details(request, restaurant):
     ส่วนฟอร์มปกติ (ไม่มี JS) จะ redirect เมื่อสำเร็จ หรือ render หน้าเดิมพร้อมค่าที่กรอกเมื่อไม่ผ่าน
     """
     wants_json = _wants_json(request)
+    # มีเฉพาะ request จากหน้านี้ (ส่วน Extra details อยู่ในฟอร์ม) ถ้าไม่มีตัวนี้ extras ที่ไม่ได้ส่งมา
+    # จะถูกตีความว่า "ลบทั้งหมด" จึงต้องไม่แตะ extra_details
+    extras_present = "extras_present" in request.POST
 
     if restaurant is None:
         message = "บัญชีนี้ยังไม่มีร้าน กรุณาสร้างร้านจากแดชบอร์ดก่อน"
@@ -182,7 +205,11 @@ def _save_store_details(request, restaurant):
         values = {**_store_values(restaurant), **{
             field: request.POST[field] for field in STORE_DETAIL_FIELDS if field in request.POST
         }}
-        return _render_store_details(request, restaurant, values=values, errors=errors)
+        # ฟอร์มที่ไม่มีส่วน Extra details (ไม่มี extras_present) ให้วาดแถวเดิมจาก DB
+        extras = _posted_extras(request) if extras_present else None
+        return _render_store_details(
+            request, restaurant, values=values, errors=errors, extras=extras
+        )
 
     data = dict(form.cleaned_data)
     # รูปเปลี่ยนได้ทางเดียวคืออัปโหลดไฟล์ใหม่ (ฟิลด์ image ของฟอร์มไม่ได้อยู่บนหน้านี้)
@@ -193,8 +220,14 @@ def _save_store_details(request, restaurant):
             data["image"] = services.upload_image_to_cloudinary(
                 restaurant, request.user, image_file
             )
-        # ไม่ส่ง extra_details: หน้านี้ไม่มีช่อง Extra details จึงคงค่าเดิมไว้
-        services.update_restaurant(restaurant, request.user, data)
+        # extra_details: บันทึกเฉพาะเมื่อ request มาจากหน้าที่มีส่วน Extra details (extras_present)
+        # no_show_grace_minutes: เว้นว่างหรือไม่ส่งมา = คงค่าเดิม (service ข้ามค่า None)
+        services.update_restaurant(
+            restaurant,
+            request.user,
+            data,
+            extra_details=data["extras"] if extras_present else None,
+        )
     except services.RestaurantError as exc:
         if wants_json:
             upload_errors = {"image_file": [str(exc)]} if image_file else {}
@@ -207,7 +240,14 @@ def _save_store_details(request, restaurant):
     message = f"บันทึกร้าน {restaurant.name} แล้ว"
     if wants_json:
         return JsonResponse(
-            {"ok": True, "message": message, "name": restaurant.name, "image_url": restaurant.image}
+            {
+                "ok": True,
+                "message": message,
+                "name": restaurant.name,
+                "image_url": restaurant.image,
+                "extras": _store_extras(restaurant),
+                "no_show_grace_minutes": restaurant.no_show_grace_minutes,
+            }
         )
     messages.success(request, message)
     return redirect("owner_store_details")
