@@ -9,7 +9,6 @@ from django.views.decorators.http import require_POST
 
 from account.decorators import customer_ui_required, owner_ui_required
 from account.ui import get_landing_url_name
-
 from bookings import services as booking_services
 from bookings.models import Booking
 from restaurants import services
