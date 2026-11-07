@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{% static 'dashboard/css/owner_navigation.css' %}?v=20261105-1">
 {% endblock %}
 {% block page_js %}
-<script src="{% static 'dashboard/js/owner_dashboard.js' %}?v=20261105-1" defer></script>
+<script src="{% static 'dashboard/js/owner_dashboard.js' %}?v=20261107-1" defer></script>
 {% endblock %}
 {% block body_class %}owner-preview-page{% endblock %}
 {% block content %}
@@ -76,6 +76,7 @@
       <label class="owner-field"><span>Opening hours</span><input name="hours" maxlength="100" placeholder="Daily · 10:00 AM – 9:00 PM"></label>
       <label class="owner-field"><span>Image URL</span><input name="image" type="url" maxlength="200" placeholder="https://..."></label>
       <label class="owner-field owner-field--wide"><span>Description</span><textarea name="description" rows="3" maxlength="500" placeholder="What makes this place special?"></textarea></label>
+      <label class="owner-field"><span>No-show grace period (minutes)</span><input name="no_show_grace_minutes" type="number" min="0" max="240" placeholder="30"></label>
       <label class="owner-field" data-table-fields><span>Number of tables</span><input name="table_count" type="number" min="1" max="50" placeholder="6"></label>
       <label class="owner-field" data-table-fields><span>Seats per table</span><input name="seats_per_table" type="number" min="1" max="12" placeholder="4"></label>
     </div>

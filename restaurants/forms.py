@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Restaurant
+from .models import MAX_NO_SHOW_GRACE_MINUTES, Restaurant
 
 PRICE_CHOICES = [
     ("", "Not specified"),
@@ -16,6 +16,11 @@ class RestaurantForm(forms.ModelForm):
     # ช่องนี้ไม่ใช่ field ของ model ใช้ตอนสร้างโต๊ะเริ่มต้น (service อ่านไปใช้)
     table_count = forms.IntegerField(min_value=1, max_value=50, required=False)
     seats_per_table = forms.IntegerField(min_value=1, max_value=12, required=False)
+
+    # เว้นว่างได้: ตอนแก้ร้านจะคงค่าเดิม ตอนสร้างร้านใช้ค่าเริ่มต้น (30 นาที)
+    no_show_grace_minutes = forms.IntegerField(
+        min_value=0, max_value=MAX_NO_SHOW_GRACE_MINUTES, required=False
+    )
 
     # ใช้ ChoiceField เพื่อกันค่าที่ไม่ได้อยู่ใน dropdown (model เป็น CharField อิสระ)
     price = forms.ChoiceField(choices=PRICE_CHOICES, required=False)

@@ -126,6 +126,7 @@
       form.elements.price.value = store.price || "";
       form.elements.address.value = store.address || "";
       form.elements.hours.value = store.hours || "";
+      form.elements.no_show_grace_minutes.value = store.noShowGraceMinutes ?? 30;
       form.elements.image.value = store.image || "";
       form.elements.description.value = store.description || "";
       (store.extras || []).forEach((extra) => addExtraRow(extra.key, extra.value));

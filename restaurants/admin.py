@@ -12,7 +12,7 @@ class TableInline(admin.TabularInline):
 
 @admin.register(Restaurant)
 class RestaurantAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "type")
+    list_display = ("name", "owner", "type", "no_show_grace_minutes")
     search_fields = ("name", "address")
     prepopulated_fields: ClassVar = {"slug": ("name",)}
     inlines = (TableInline,)

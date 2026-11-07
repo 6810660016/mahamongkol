@@ -16,6 +16,9 @@
   let calendarYear = initialYear;
   let calendarMonth = initialMonth - 1;
   const cancelForm = document.querySelector("[data-cancel-form]");
+  const completeForm = document.querySelector("[data-complete-form]");
+  const statusLabels = { confirmed: "Confirmed", completed: "Completed", no_show: "No Show", cancelled: "Cancelled" };
+  const statusLabel = (status) => statusLabels[status] || status;
   const element = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text !== undefined) node.textContent = text; return node; };
   function renderCalendar() {
     const monthStart = new Date(calendarYear, calendarMonth, 1);
@@ -34,10 +37,12 @@
     calendarDays.replaceChildren(...cells);
   }
   function showDetails(booking) {
-    const fields = [["Booking", booking.id], ["Guest", booking.name], ["Date", selectedDate], ["Time", booking.time], ["Table", booking.table], ["Party", `${booking.party} guests`], ["Status", booking.status === "confirmed" ? "Confirmed" : "Cancelled"]];
+    const fields = [["Booking", booking.id], ["Guest", booking.name], ["Date", selectedDate], ["Time", booking.time], ["Table", booking.table], ["Party", `${booking.party} guests`], ["Status", statusLabel(booking.status)]];
     detail.replaceChildren(...fields.map(([name, value]) => { const row = document.createElement("div"); row.append(element("dt", "", name), element("dd", "", value)); return row; }));
     cancelForm.action = booking.cancelUrl;
-    cancelForm.hidden = booking.status !== "confirmed";
+    cancelForm.hidden = !booking.canCancel;
+    completeForm.action = booking.completeUrl;
+    completeForm.hidden = !booking.canComplete;
     dialog.showModal();
   }
   function render() {
@@ -46,8 +51,8 @@
     const term = search.value.trim().toLowerCase();
     const visible = onDate.filter((item) => (filter === "all" || item.status === filter) && `${item.name} ${item.id} ${item.table}`.toLowerCase().includes(term));
     document.querySelector("[data-summary-total]").textContent = onDate.length;
-    document.querySelector("[data-summary-guests]").textContent = onDate.filter((item) => item.status === "confirmed").reduce((sum, item) => sum + item.party, 0);
-    document.querySelector("[data-summary-confirmed]").textContent = onDate.filter((item) => item.status === "confirmed").length;
+    document.querySelector("[data-summary-guests]").textContent = onDate.filter((item) => item.status === "confirmed" || item.status === "completed").reduce((sum, item) => sum + item.party, 0);
+    document.querySelector("[data-summary-reserved]").textContent = onDate.filter((item) => item.status === "confirmed" || item.status === "completed").length;
     document.querySelector("[data-summary-cancelled]").textContent = onDate.filter((item) => item.status === "cancelled").length;
     document.querySelector("[data-selected-date]").textContent = selectedDate;
     const times = [...new Set(visible.map((item) => item.time))];
@@ -65,7 +70,7 @@
         const row = document.createElement("tr");
         row.append(element("td", "", item.name), element("td", "", item.id), element("td", "", item.table), element("td", "", `${item.party} guests`));
         const status = document.createElement("td");
-        status.append(element("span", `booking-status${item.status === "cancelled" ? " booking-status--cancelled" : ""}`, item.status === "cancelled" ? "Cancelled" : "Confirmed"));
+        status.append(element("span", `booking-status booking-status--${item.status}`, statusLabel(item.status)));
         const action = document.createElement("td");
         const button = element("button", "booking-details-button", "↗"); button.type = "button"; button.setAttribute("aria-label", `View ${item.name} booking details`); button.addEventListener("click", () => showDetails(item)); action.append(button);
         row.append(status, action); body.append(row);
@@ -76,6 +81,7 @@
   }
   dateInput.addEventListener("change", () => goToDate(dateInput.value)); search.addEventListener("input", render);
   cancelForm.addEventListener("submit", (event) => { if (!window.confirm("ยืนยันการยกเลิกการจองนี้?")) event.preventDefault(); });
+  completeForm.addEventListener("submit", (event) => { if (!window.confirm("ยืนยันว่าการจองนี้เสร็จสิ้นแล้ว?")) event.preventDefault(); });
   document.querySelector("[data-month-prev]").addEventListener("click", () => { const date = new Date(calendarYear, calendarMonth - 1, 1); calendarYear = date.getFullYear(); calendarMonth = date.getMonth(); renderCalendar(); });
   document.querySelector("[data-month-next]").addEventListener("click", () => { const date = new Date(calendarYear, calendarMonth + 1, 1); calendarYear = date.getFullYear(); calendarMonth = date.getMonth(); renderCalendar(); });
   document.querySelectorAll("[data-booking-filter]").forEach((button) => button.addEventListener("click", () => { filter = button.dataset.bookingFilter; document.querySelectorAll("[data-booking-filter]").forEach((item) => { item.classList.toggle("is-active", item === button); item.setAttribute("aria-pressed", item === button ? "true" : "false"); }); render(); }));

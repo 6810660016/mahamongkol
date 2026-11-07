@@ -49,18 +49,39 @@ def booking_view(request, slug):
     )
 
 
+QUEUE_TABS = {
+    "upcoming": (Booking.Status.CONFIRMED,),
+    "past": (Booking.Status.COMPLETED, Booking.Status.NO_SHOW),
+    "cancelled": (Booking.Status.CANCELLED,),
+}
+
+
 @customer_ui_required
 def my_queues_view(request):
-    bookings = (
-        Booking.objects.filter(
-            user=request.user,
-            status=Booking.Status.CONFIRMED,
-            date__gte=timezone.localdate(),
-        )
-        .select_related("table__restaurant")
-        .order_by("date", "time")
+    # ไม่มี background worker: อัปเดต No Show ของลูกค้าคนนี้ทุกครั้งที่เปิดหน้า
+    services.mark_no_shows(user=request.user)
+
+    tab = request.GET.get("tab", "upcoming")
+    if tab not in QUEUE_TABS:
+        tab = "upcoming"
+
+    mine = Booking.objects.filter(user=request.user).select_related("table__restaurant")
+    counts = {name: mine.filter(status__in=statuses).count() for name, statuses in QUEUE_TABS.items()}
+    ordering = ("date", "time") if tab == "upcoming" else ("-date", "-time")
+    bookings = mine.filter(status__in=QUEUE_TABS[tab]).order_by(*ordering)
+    return render(
+        request,
+        "bookings/my_queues.html",
+        {
+            "bookings": bookings,
+            "active_tab": tab,
+            "tabs": [
+                {"key": "upcoming", "label": "Upcoming", "count": counts["upcoming"]},
+                {"key": "past", "label": "Past", "count": counts["past"]},
+                {"key": "cancelled", "label": "Cancelled", "count": counts["cancelled"]},
+            ],
+        },
     )
-    return render(request, "bookings/my_queues.html", {"bookings": bookings})
 
 
 @customer_ui_required

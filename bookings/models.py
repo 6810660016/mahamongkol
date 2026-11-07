@@ -6,6 +6,8 @@ from django.db.models import Q
 class Booking(models.Model):
     class Status(models.TextChoices):
         CONFIRMED = "confirmed", "Confirmed"
+        COMPLETED = "completed", "Completed"
+        NO_SHOW = "no_show", "No Show"
         CANCELLED = "cancelled", "Cancelled"
 
     user = models.ForeignKey(
@@ -26,6 +28,14 @@ class Booking(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="completed_bookings",
+    )
 
     class Meta:
         ordering = ("date", "time")
@@ -49,6 +59,10 @@ class Booking(models.Model):
     @property
     def image(self):
         return self.table.restaurant.image
+
+    @property
+    def code(self):
+        return f"B{self.id:03d}"
 
     @property
     def is_confirmed(self):
