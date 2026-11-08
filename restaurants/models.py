@@ -160,6 +160,39 @@ class BookingSlot(models.Model):
         return f"{self.restaurant} {self.time:%H:%M} ({self.table_count} tables x {self.seats_per_table} seats)"
 
 
+class BookingSlotDate(models.Model):
+    """รอบเวลาจองของ "วันที่ระบุ" ที่เจ้าของกำหนดล่วงหน้าจากปฏิทิน
+
+    ถ้าวันนั้นมีแถวอยู่ แถวเหล่านี้จะแทนที่รอบปกติของร้านทั้งหมดสำหรับวันนั้น
+    (ปิดรอบ = ติ๊ก Available ออก, ลบทุกแถว = กลับไปใช้รอบปกติ)
+    """
+
+    restaurant = models.ForeignKey(
+        Restaurant, on_delete=models.CASCADE, related_name="booking_slot_dates"
+    )
+    date = models.DateField()
+    time = models.TimeField()
+    table_count = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_TABLES_PER_SLOT)]
+    )
+    seats_per_table = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_SEATS_PER_TABLE)]
+    )
+    is_available = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("date", "time")
+        constraints = (
+            models.UniqueConstraint(
+                fields=("restaurant", "date", "time"),
+                name="unique_booking_slot_date_time_per_restaurant",
+            ),
+        )
+
+    def __str__(self):
+        return f"{self.restaurant} {self.date} {self.time:%H:%M}"
+
+
 class Review(models.Model):
     """One star rating (with optional comment) per customer per restaurant."""
 

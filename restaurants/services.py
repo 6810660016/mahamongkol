@@ -14,6 +14,7 @@ from .models import (
     MAX_SEATS_PER_TABLE,
     MAX_TABLES_PER_SLOT,
     BookingSlot,
+    BookingSlotDate,
     Restaurant,
     RestaurantImage,
     Table,
@@ -271,6 +272,27 @@ def replace_booking_slots(restaurant, by_user, rows):
                 time=slot_time,
                 defaults={k: v for k, v in row.items() if k != "time"},
             )
+
+
+def replace_date_slots(restaurant, by_user, day, rows):
+    """ตั้งรอบเวลาของวันที่ระบุให้ตรงกับ rows (rows ว่าง = ลบ กลับไปใช้รอบปกติ)
+
+    การจองที่ยืนยันแล้วในวันนั้นยังอยู่ครบ
+    """
+    _require_manage(by_user, restaurant)
+    with transaction.atomic():
+        restaurant.booking_slot_dates.filter(date=day).delete()
+        BookingSlotDate.objects.bulk_create(
+            BookingSlotDate(
+                restaurant=restaurant,
+                date=day,
+                time=row["time"],
+                table_count=row["table_count"],
+                seats_per_table=row["seats_per_table"],
+                is_available=row["is_available"],
+            )
+            for row in rows
+        )
 
 
 def set_status(restaurant, by_user, *, status=None, is_open=None):

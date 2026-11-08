@@ -150,7 +150,7 @@
   function addSlotRow(slot) {
     const row = document.createElement("tr");
     row.setAttribute("data-slot-row", "");
-    const cells = [document.createElement("td"), document.createElement("td"), document.createElement("td"), document.createElement("td"), document.createElement("td")];
+    const cells = Array.from({ length: 6 }, () => document.createElement("td"));
     const toggle = document.createElement("input");
     toggle.type = "checkbox"; toggle.checked = slot.available !== false; toggle.setAttribute("data-slot-toggle", ""); toggle.setAttribute("aria-label", "Slot available");
     const flag = document.createElement("input");
@@ -159,9 +159,11 @@
     cells[1].append(slotInput("slot_time", "time", "Slot time", slot.time || "18:00"));
     cells[2].append(slotInput("slot_tables", "number", "Number of tables", slot.table_count || 4, { min: 1, max: addSlotButton.dataset.maxTables }));
     cells[3].append(slotInput("slot_seats", "number", "Guests per table", slot.seats || 4, { min: 1, max: addSlotButton.dataset.maxSeats }));
+    cells[4].className = "store-slot-booked"; cells[4].setAttribute("data-slot-booked", "");
+    cells[4].textContent = slot.booked === undefined ? "–" : slot.booked + " / " + (slot.table_count || 0);
     const remove = document.createElement("button");
     remove.type = "button"; remove.textContent = "×"; remove.setAttribute("data-remove-slot", ""); remove.setAttribute("aria-label", "Remove slot");
-    cells[4].append(remove);
+    cells[5].append(remove);
     row.append(...cells);
     list.append(row);
     return row;
@@ -175,8 +177,100 @@
     const toggle = event.target.closest("[data-slot-toggle]");
     if (toggle) toggle.closest("tr").querySelector("input[name=slot_available]").value = toggle.checked ? "1" : "0";
   });
-  const renderSlots = (items) => { list.replaceChildren(); items.forEach(addSlotRow); syncSlotButton(); };
+  const renderSlots = (items) => { list.replaceChildren(); items.forEach(addSlotRow); syncSlotButton(); setDirty(false); };
   syncSlotButton();
+
+  // ปฏิทิน: เลือกวันที่เพื่อกำหนดรอบเวลาเฉพาะวันนั้นล่วงหน้า (เลือกได้ตั้งแต่วันนี้จนถึงวันสุดท้ายที่ลูกค้าจองได้)
+  // ไม่เลือกวัน = แก้รอบปกติของร้าน เลือกวัน = ตารางด้านซ้ายคือรอบของวันนั้น (แทนรอบปกติเฉพาะวันนั้น)
+  let dirty = false;
+  function setDirty(value) { dirty = value; }
+  list.addEventListener("input", () => setDirty(true));
+  list.addEventListener("change", () => setDirty(true));
+  list.addEventListener("click", (event) => { if (event.target.closest("[data-remove-slot]")) setDirty(true); });
+  addSlotButton.addEventListener("click", () => setDirty(true));
+
+  const calendar = form.querySelector("[data-calendar]");
+  const slotsDate = form.querySelector("[data-slots-date]");
+  const statusBox = form.querySelector("[data-slots-status]");
+  const clearButton = form.querySelector("[data-slots-clear]");
+  const usualButton = form.querySelector("[data-slots-usual]");
+  if (calendar && slotsDate) {
+    const iso = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    const parse = (text) => { const [y, m, d] = text.split("-").map(Number); return new Date(y, m - 1, d); };
+    const minDate = parse(calendar.dataset.min);
+    const maxDate = parse(calendar.dataset.max);
+    const todayText = iso(new Date());
+    let customDates = new Set((calendar.dataset.customDates || "").split(",").filter(Boolean));
+    let view = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const grid = calendar.querySelector("[data-cal-grid]");
+    const title = calendar.querySelector("[data-cal-title]");
+    const prev = calendar.querySelector("[data-cal-prev]");
+    const next = calendar.querySelector("[data-cal-next]");
+    const disabledAtStart = addSlotButton.hasAttribute("disabled");
+
+    function drawCalendar() {
+      title.textContent = view.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+      grid.replaceChildren();
+      const offset = (new Date(view.getFullYear(), view.getMonth(), 1).getDay() + 6) % 7; // เริ่มวันจันทร์
+      for (let i = 0; i < offset; i += 1) grid.append(document.createElement("span"));
+      const days = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate();
+      for (let day = 1; day <= days; day += 1) {
+        const date = new Date(view.getFullYear(), view.getMonth(), day);
+        const text = iso(date);
+        const button = document.createElement("button");
+        button.type = "button"; button.textContent = String(day); button.dataset.date = text;
+        button.disabled = disabledAtStart || date < minDate || date > maxDate;
+        if (text === todayText) button.classList.add("is-today");
+        if (text === slotsDate.value) { button.classList.add("is-selected"); button.setAttribute("aria-pressed", "true"); }
+        if (customDates.has(text)) button.classList.add("has-custom");
+        grid.append(button);
+      }
+      prev.disabled = new Date(view.getFullYear(), view.getMonth(), 1) <= new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+      next.disabled = new Date(view.getFullYear(), view.getMonth() + 1, 1) > maxDate;
+    }
+    prev.addEventListener("click", () => { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); drawCalendar(); });
+    next.addEventListener("click", () => { view = new Date(view.getFullYear(), view.getMonth() + 1, 1); drawCalendar(); });
+
+    const labelFor = (text) => parse(text).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    function showStatus(source, text) {
+      const defaultNote = form.querySelector("[data-default-note]");
+      if (defaultNote) defaultNote.hidden = true;
+      clearButton.hidden = source !== "date";
+      usualButton.hidden = false;
+      const lead = "Schedule for " + labelFor(text) + ". ";
+      statusBox.textContent = source === "date" ? lead + "This date has its own schedule. Edit it, then press Save."
+        : lead + "It uses the " + (source === "usual" ? "usual" : "default") + " times for now. Change them and press Save to give this date its own schedule.";
+    }
+    grid.addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-date]");
+      if (!button || button.disabled) return;
+      if (dirty && !window.confirm("เปลี่ยนวันที่ การแก้ไขที่ยังไม่ได้บันทึกจะหายไป ต้องการทำต่อไหม?")) return;
+      try {
+        const response = await fetch(calendar.dataset.url + "?date=" + encodeURIComponent(button.dataset.date), { headers: { "X-Requested-With": "XMLHttpRequest", "Accept": "application/json" }, credentials: "same-origin" });
+        const payload = await response.json();
+        if (!response.ok) { announce(payload.error || "โหลดรอบเวลาของวันนี้ไม่สำเร็จ"); return; }
+        slotsDate.value = payload.date;
+        renderSlots(payload.rows);
+        showStatus(payload.source, payload.date);
+        drawCalendar();
+      } catch (error) { announce("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองเลือกวันที่อีกครั้ง"); }
+    });
+    usualButton.addEventListener("click", () => {
+      if (dirty && !window.confirm("การแก้ไขที่ยังไม่ได้บันทึกจะหายไป ต้องการทำต่อไหม?")) return;
+      window.location.href = form.action;
+    });
+    clearButton.addEventListener("click", () => {
+      list.replaceChildren(); syncSlotButton(); setDirty(true);
+      statusBox.textContent = "All rows removed. Press Save and this date will use the usual schedule again.";
+    });
+    // บันทึกสำเร็จ: ปรับจุดบนปฏิทินตามที่เซิร์ฟเวอร์บันทึกจริง และวาดสถานะของวันที่เลือกใหม่
+    window.refreshSlotCalendar = (dates, selected) => {
+      if (Array.isArray(dates)) customDates = new Set(dates);
+      if (selected) showStatus(customDates.has(selected) ? "date" : "usual", selected);
+      drawCalendar();
+    };
+    drawCalendar();
+  }
 
   // ก่อนบันทึกจริงถามยืนยันอีกครั้งด้วย dialog (ไม่มี <dialog> ในเบราว์เซอร์เก่าใช้ confirm() แทน)
   const confirmDialog = document.querySelector("[data-confirm-dialog]");
@@ -225,6 +319,7 @@
         if (profile) profile.commit(payload.image_url);
         if (Array.isArray(payload.extras)) renderExtras(payload.extras);
         if (Array.isArray(payload.booking_slots)) renderSlots(payload.booking_slots);
+        if (window.refreshSlotCalendar) window.refreshSlotCalendar(payload.custom_dates, form.elements.slots_date ? form.elements.slots_date.value : "");
         if (Array.isArray(payload.gallery)) payload.gallery.forEach((item) => { if (gallery[item.slot]) gallery[item.slot].commit(item.url); });
         const chip = document.querySelector("[data-store-name-chip]");
         if (chip && payload.name) chip.textContent = payload.name;

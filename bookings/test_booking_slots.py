@@ -161,3 +161,45 @@ class SlotViewTests(SlotBookingBase):
         )
         self.assertRedirects(response, reverse("my_queues"))
         self.assertEqual(Booking.objects.get().guests, 3)
+
+
+class DateScheduleTests(SlotBookingBase):
+    """A schedule set for one calendar date replaces the usual slots for that date only."""
+
+    def set_date_slot(self, day, at=time(12, 0), tables=1, seats=2, available=True):
+        return self.store.booking_slot_dates.create(
+            date=day, time=at, table_count=tables, seats_per_table=seats, is_available=available
+        )
+
+    def test_date_schedule_replaces_usual_slots_for_that_date_only(self):
+        self.set_date_slot(self.day)
+        self.assertEqual([o["value"] for o in services.slot_options(self.store, self.day)], ["12:00"])
+        other_day = self.day + timedelta(days=1)
+        self.assertEqual([o["value"] for o in services.slot_options(self.store, other_day)], ["18:00"])
+        with self.assertRaises(services.BookingError):
+            self.book(self.users[0], at="18:00")
+        self.book(self.users[0], at="12:00")
+        self.book(self.users[1], day=other_day, at="18:00")
+
+    def test_date_capacity_comes_from_the_date_schedule(self):
+        self.set_date_slot(self.day, tables=1, seats=2)
+        self.book(self.users[0], at="12:00")
+        with self.assertRaisesMessage(services.BookingError, "เต็ม"):
+            self.book(self.users[1], at="12:00")
+        with self.assertRaisesMessage(services.BookingError, "up to 2"):
+            self.book(self.users[2], guests=3, at="12:00")
+
+    def test_closed_day_has_no_times(self):
+        self.set_date_slot(self.day, available=False)
+        self.assertEqual(services.slot_options(self.store, self.day), [])
+        with self.assertRaises(services.BookingError):
+            self.book(self.users[0], at="12:00")
+
+    def test_date_schedule_works_for_a_store_without_usual_slots(self):
+        plain = Restaurant.objects.create(slug="date-only", name="Date Only")
+        plain.booking_slot_dates.create(
+            date=self.day, time=time(12, 0), table_count=1, seats_per_table=4
+        )
+        self.assertTrue(services.uses_custom_slots(plain, self.day))
+        self.assertFalse(services.uses_custom_slots(plain, self.day + timedelta(days=1)))
+        services.create_booking(self.users[0], plain, self.day, "12:00", 2)

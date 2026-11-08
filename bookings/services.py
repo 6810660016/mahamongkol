@@ -70,9 +70,31 @@ def booked_table_ids(restaurant, day, slot):
     )
 
 
-def uses_custom_slots(restaurant):
+def day_slots(restaurant, day):
+    """The owner's slots for one date as (time, tables, seats, available) tuples, or None.
+
+    A schedule set for that exact date (from the calendar) wins over the restaurant's
+    usual slots; None means the owner set nothing, so the default times and tables apply.
+    """
+    for rows in (
+        restaurant.booking_slot_dates.filter(date=day),
+        restaurant.booking_slots.all(),
+    ):
+        slots = [
+            (row.time, row.table_count, row.seats_per_table, row.is_available) for row in rows
+        ]
+        if slots:
+            return slots
+    return None
+
+
+def uses_custom_slots(restaurant, day=None):
     """True once the owner has set up their own time slots (otherwise the default slots apply)."""
-    return restaurant.booking_slots.exists()
+    if day is not None:
+        return day_slots(restaurant, day) is not None
+    return (
+        restaurant.booking_slots.exists() or restaurant.booking_slot_dates.exists()
+    )
 
 
 def is_past_slot(day, slot_time, now=None):
@@ -89,11 +111,9 @@ def slot_options(restaurant, day, guests=None, now=None):
     `state` is open, full, past (already started) or too_large (the party does not fit
     one table at that time). Used for both the booking page and its JSON endpoint.
     """
-    if uses_custom_slots(restaurant):
-        slots = [
-            (slot.time, slot.table_count, slot.seats_per_table)
-            for slot in restaurant.booking_slots.filter(is_available=True)
-        ]
+    custom = day_slots(restaurant, day)
+    if custom is not None:
+        slots = [(t, count, seats) for t, count, seats, available in custom if available]
     else:
         tables = list(restaurant.tables.all())
         slots = [(parse_slot(value), None, None) for value in SLOTS]
@@ -143,29 +163,32 @@ def _create_slot_booking(user, restaurant, day, slot_value, guests):
         raise BookingError(INVALID_INPUT_MESSAGE) from None
     try:
         with transaction.atomic():
-            # Locking the slot row makes simultaneous bookings count one at a time.
-            slot = (
-                restaurant.booking_slots.select_for_update()
-                .filter(time=slot_time, is_available=True)
-                .first()
+            # Locking the restaurant row makes simultaneous bookings count one at a time.
+            Restaurant.objects.select_for_update().get(pk=restaurant.pk)
+            match = next(
+                (
+                    (count, seats)
+                    for t, count, seats, available in day_slots(restaurant, day) or ()
+                    if t == slot_time and available
+                ),
+                None,
             )
-            if slot is None or not 1 <= guests <= MAX_GUESTS:
+            if match is None or not 1 <= guests <= MAX_GUESTS:
                 raise BookingError(INVALID_INPUT_MESSAGE)
-            if is_past_slot(day, slot.time):
+            table_count, seats_per_table = match
+            if is_past_slot(day, slot_time):
                 raise BookingError(PAST_TIME_MESSAGE)
-            if guests > slot.seats_per_table:
-                raise BookingError(
-                    f"Tables at this time seat up to {slot.seats_per_table} guests."
-                )
-            booked = booked_table_ids(restaurant, day, slot.time)
-            if len(booked) >= slot.table_count:
+            if guests > seats_per_table:
+                raise BookingError(f"Tables at this time seat up to {seats_per_table} guests.")
+            booked = booked_table_ids(restaurant, day, slot_time)
+            if len(booked) >= table_count:
                 raise BookingError(FULL_MESSAGE)
             table = (
                 restaurant.tables.exclude(id__in=booked).order_by("name").first()
-                or _next_table(restaurant, slot.seats_per_table)
+                or _next_table(restaurant, seats_per_table)
             )
             return Booking.objects.create(
-                user=user, table=table, date=day, time=slot.time, guests=guests
+                user=user, table=table, date=day, time=slot_time, guests=guests
             )
     except IntegrityError:
         raise BookingError("That table was just taken. Please try again.") from None
@@ -178,7 +201,7 @@ def create_booking(user, restaurant, day, slot_value, guests):
     if not restaurant.accepts_bookings:
         raise BookingError("This restaurant does not take table bookings. Join the queue instead.")
 
-    custom = uses_custom_slots(restaurant)
+    custom = uses_custom_slots(restaurant, day)
     if custom:
         try:
             slot = time.fromisoformat(slot_value)
