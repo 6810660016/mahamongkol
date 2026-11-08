@@ -214,16 +214,14 @@ def _save_store_details(request, restaurant):
     data.pop("image", None)
 
     try:
-        if image_file:
-            data["image"] = services.upload_image_to_cloudinary(
-                restaurant, request.user, image_file
-            )
+        # รูปใหม่ (ถ้ามี) อัปโหลดก่อนแล้วค่อยบันทึก DB; รูปเก่าถูกลบหลัง commit (ดู services)
         # extra_details: บันทึกเฉพาะเมื่อ request มาจากหน้าที่มีส่วน Extra details (extras_present)
         # no_show_grace_minutes: เว้นว่างหรือไม่ส่งมา = คงค่าเดิม (service ข้ามค่า None)
-        services.update_restaurant(
+        services.update_restaurant_with_image(
             restaurant,
             request.user,
             data,
+            image_file,
             extra_details=data["extras"] if extras_present else None,
         )
     except services.RestaurantError as exc:

@@ -1,3 +1,6 @@
+import logging
+from functools import partial
+
 import cloudinary.uploader
 from cloudinary.exceptions import Error as CloudinaryError
 from django.db import IntegrityError, transaction
@@ -5,6 +8,8 @@ from django.db.models import ProtectedError
 from django.utils.text import slugify
 
 from .models import Restaurant, Table
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_TABLE_COUNT = 6
 DEFAULT_SEATS = 4
@@ -97,14 +102,49 @@ def managed_restaurants(user):
     return restaurants.filter(owner=user)
 
 def update_restaurant(restaurant, by_user, data, *, extra_details=None):
-    """แก้ข้อมูลร้าน ไม่เปลี่ยน slug เพื่อไม่ให้ลิงก์เดิมของลูกค้าเสีย"""
+    """แก้ข้อมูลร้าน ไม่เปลี่ยน slug เพื่อไม่ให้ลิงก์เดิมของลูกค้าเสีย
+
+    ถ้ารูป (image) เปลี่ยน จะเก็บ data["image_public_id"] (ถ้ามี) คู่กับรูปใหม่ แล้วลบรูปเก่า
+    บน Cloudinary หลัง DB commit เท่านั้น (ถ้าลบไม่สำเร็จแค่ log ไม่ทำให้การบันทึกล้ม)
+    """
     _require_manage(by_user, restaurant)
-    for field, value in _field_values(data).items():
-        setattr(restaurant, field, value)
-    if extra_details is not None:
-        restaurant.extra_details = list(extra_details)
-    restaurant.save()
+    values = _field_values(data)
+    old_public_id = restaurant.image_public_id
+    image_changed = "image" in values and values["image"] != restaurant.image
+
+    with transaction.atomic():
+        for field, value in values.items():
+            setattr(restaurant, field, value)
+        if image_changed:
+            # URL ที่วางเองไม่มี public_id จึงต้องเคลียร์ค่าเดิม ไม่ให้ชี้ไปรูปที่เลิกใช้แล้ว
+            restaurant.image_public_id = data.get("image_public_id", "")
+        if extra_details is not None:
+            restaurant.extra_details = list(extra_details)
+        restaurant.save()
+        if image_changed and old_public_id and old_public_id != restaurant.image_public_id:
+            transaction.on_commit(partial(delete_cloudinary_image, old_public_id))
     return restaurant
+
+
+def update_restaurant_with_image(
+    restaurant, by_user, data, uploaded_file=None, *, extra_details=None
+):
+    """แก้ข้อมูลร้านพร้อมรูปใหม่ (ถ้ามี) ลำดับ: อัปโหลดรูปใหม่ -> บันทึก DB -> ลบรูปเก่า
+
+    ถ้าบันทึก DB ไม่สำเร็จ (error อะไรก็ตาม) จะลบรูปใหม่ที่เพิ่งอัปโหลดทิ้ง แล้ว raise ต่อ
+    รูปเดิมและข้อมูลเดิมจึงไม่เปลี่ยน และไม่มีรูปใหม่ค้างบน Cloudinary
+    """
+    data = dict(data)
+    new_public_id = ""
+    if uploaded_file is not None:
+        data["image"], new_public_id = upload_store_image(restaurant, by_user, uploaded_file)
+        data["image_public_id"] = new_public_id
+    try:
+        return update_restaurant(restaurant, by_user, data, extra_details=extra_details)
+    except Exception:
+        if new_public_id:
+            delete_cloudinary_image(new_public_id)
+        raise
 
 
 def set_status(restaurant, by_user, *, status=None, is_open=None):
@@ -153,11 +193,11 @@ def validate_image_upload(uploaded_file):
         raise RestaurantError("รองรับเฉพาะไฟล์รูป JPG, PNG หรือ WebP เท่านั้น")
 
 
-def upload_image_to_cloudinary(restaurant, by_user, uploaded_file):
-    """ตรวจไฟล์รูปแล้วอัปโหลดขึ้น Cloudinary คืนค่า secure_url
+def upload_store_image(restaurant, by_user, uploaded_file):
+    """ตรวจไฟล์รูปแล้วอัปโหลดขึ้น Cloudinary คืนค่า (secure_url, public_id)
 
-    ฟังก์ชันนี้ **ไม่บันทึก** อะไรลง DB ผู้เรียกต้องนำ URL ไปบันทึกเองผ่าน
-    update_restaurant พร้อมฟิลด์อื่น เพื่อให้รูปกับข้อมูลร้านเปลี่ยนพร้อมกันตอนกด Save
+    ฟังก์ชันนี้ **ไม่บันทึก** อะไรลง DB ผู้เรียกต้องบันทึกเองผ่าน update_restaurant
+    (ใช้ update_restaurant_with_image ที่ดูแลการลบรูปเก่า/รูปใหม่ที่บันทึกไม่สำเร็จให้)
     ถ้าตรวจไฟล์หรืออัปโหลดไม่ผ่านจะ raise RestaurantError (ไม่แตะรูปเดิม)
     """
     _require_manage(by_user, restaurant)
@@ -169,6 +209,29 @@ def upload_image_to_cloudinary(restaurant, by_user, uploaded_file):
             folder=f"{CLOUDINARY_FOLDER}/{restaurant.pk}",
             resource_type="image",
         )
-        return result["secure_url"]
+        return result["secure_url"], result.get("public_id", "")
     except (CloudinaryError, KeyError, OSError):
         raise RestaurantError("อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่อีกครั้ง") from None
+
+
+def delete_cloudinary_image(public_id):
+    """ลบรูปบน Cloudinary แบบ best effort คืน True ถ้าลบแล้ว ไม่เคย raise
+
+    ลบเฉพาะรูปใน folder ของเรา และไม่ลบถ้ายังมีร้านอ้างถึง public_id นี้อยู่
+    (ใช้กับ on_commit และการเก็บกวาดหลัง error จึงห้ามทำให้การบันทึกของผู้ใช้ล้ม)
+    """
+    if not public_id or not public_id.startswith(f"{CLOUDINARY_FOLDER}/"):
+        return False
+    try:
+        if Restaurant.objects.filter(image_public_id=public_id).exists():
+            return False
+        result = cloudinary.uploader.destroy(
+            public_id, resource_type="image", invalidate=True
+        )
+    except Exception:  # noqa: BLE001 - ลบไม่สำเร็จต้องไม่ทำให้ผู้ใช้เห็น error
+        logger.exception("Could not delete Cloudinary image %s", public_id)
+        return False
+    if result.get("result") not in ("ok", "not found"):
+        logger.warning("Cloudinary did not delete %s: %s", public_id, result)
+        return False
+    return True

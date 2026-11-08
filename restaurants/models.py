@@ -54,6 +54,9 @@ class Restaurant(models.Model):
     # ลิงก์ Google Maps ฯลฯ ยาวได้เกิน 200 ตัวอักษร จึงตั้ง max_length เอง
     map_url = models.URLField(max_length=500, blank=True)
     image = models.URLField(blank=True)
+    # public_id ของรูปที่อัปโหลดผ่านหน้า Store Details (ใช้ลบรูปเก่าบน Cloudinary)
+    # ว่างได้: รูปเก่าก่อน Phase 6 หรือ URL ที่วางเองจะไม่มีค่านี้ และจะไม่ถูกลบ
+    image_public_id = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     # นาทีที่รอลูกค้าหลังเวลานัด ก่อนนับการจองที่ยัง confirmed เป็น No Show
     no_show_grace_minutes = models.PositiveSmallIntegerField(
