@@ -11,7 +11,8 @@
 
   // รูปโปรไฟล์และรูป Pictures ทำงานเหมือนกัน: เลือกแล้วแสดงแค่ preview ยังไม่ส่งอะไรไปเซิร์ฟเวอร์
   // ไฟล์จะถูกส่งไปพร้อมข้อมูลร้านตอนกด Save เท่านั้น (เซิร์ฟเวอร์ตรวจไฟล์ซ้ำเสมอ)
-  // ช่อง Pictures มีช่องติ๊ก "Remove photo" ใช้ลบรูปที่บันทึกไว้แล้ว (ส่งเป็น gallery_remove)
+  // ช่อง Pictures: ปุ่ม × มุมขวาบนของรูปลบรูปในช่อง (ลบจริงตอนกด Save) และมี Undo ให้เปลี่ยนใจ
+  // ข้างหลังใช้ช่องติ๊ก gallery_remove เป็นตัวส่งค่า ถ้าไม่มี JS ช่องติ๊กนี้จะโผล่ให้ติ๊กเองแทนปุ่ม ×
   let profile = null; // { commit(url) } ใช้หลังบันทึกสำเร็จ
   const gallery = {}; // { slot: { commit(url) } }
   form.querySelectorAll("[data-image-input]").forEach((input) => {
@@ -22,32 +23,61 @@
     const slotBox = input.closest("[data-gallery-slot]");
     const removeLabel = slotBox ? slotBox.querySelector("[data-gallery-remove-label]") : null;
     const removeBox = slotBox ? slotBox.querySelector("[data-gallery-remove]") : null;
+    const clearButton = slotBox ? slotBox.querySelector("[data-gallery-clear]") : null;
+    const undoBox = slotBox ? slotBox.querySelector("[data-gallery-undo]") : null;
+    const undoButton = slotBox ? slotBox.querySelector("[data-gallery-undo-button]") : null;
     let savedSrc = image.getAttribute("src");
     let previewUrl;
 
-    const showImage = (src) => { image.src = src; image.hidden = false; label.hidden = true; };
-    const showEmpty = () => { image.removeAttribute("src"); image.hidden = true; label.hidden = false; };
+    // × แสดงเมื่อมีรูปให้ลบ (รูปที่บันทึกไว้หรือรูปที่เพิ่งเลือก) Undo แสดงเมื่อสั่งลบรูปที่บันทึกไว้แล้ว
+    const syncControls = () => {
+      if (!removeBox) return;
+      const removed = removeBox.checked;
+      if (clearButton) clearButton.hidden = removed || !(savedSrc || previewUrl);
+      if (undoBox) undoBox.hidden = !removed;
+    };
+    const showImage = (src) => { image.src = src; image.hidden = false; label.hidden = true; syncControls(); };
+    const showEmpty = () => { image.removeAttribute("src"); image.hidden = true; label.hidden = false; syncControls(); };
     // ติ๊ก Remove อยู่ = แสดงช่องว่าง (รูปจริงจะถูกลบตอนกด Save)
     const restoreSaved = () => { if (savedSrc && !(removeBox && removeBox.checked)) showImage(savedSrc); else showEmpty(); };
     const clearPreview = () => { if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; } };
-    const syncRemoveLabel = () => { if (removeLabel) removeLabel.hidden = !savedSrc; };
 
     // บันทึกสำเร็จ: รูปที่เลือกกลายเป็นรูปที่บันทึกแล้ว (หรือถูกลบถ้า url ว่าง) และล้างไฟล์/ช่องติ๊กออก กันส่งซ้ำ
     const commit = (url) => {
       savedSrc = url || null;
       input.value = "";
       if (removeBox) removeBox.checked = false;
-      clearPreview(); restoreSaved(); syncRemoveLabel();
+      clearPreview(); restoreSaved();
     };
     if (isProfile) profile = { commit: (url) => { if (url) commit(url); else { input.value = ""; clearPreview(); restoreSaved(); } } };
     if (slotBox) gallery[slotBox.dataset.gallerySlot] = { commit };
 
     if (removeBox) {
+      // มี JS: ซ่อนช่องติ๊กแบบ fallback แล้วใช้ปุ่ม × / Undo แทน (ช่องติ๊กยังเป็นตัวเก็บค่าที่ถูกส่งไปกับฟอร์ม)
+      if (removeLabel) removeLabel.hidden = true;
       removeBox.addEventListener("change", () => {
         if (removeBox.checked) { input.value = ""; clearPreview(); }
         setError(input.name, "");
         restoreSaved();
       });
+      if (clearButton) {
+        clearButton.addEventListener("click", () => {
+          input.value = ""; clearPreview(); setError(input.name, "");
+          // มีรูปที่บันทึกไว้ = สั่งลบ (กด Undo ได้) ถ้ามีแค่รูปที่เพิ่งเลือก = ทิ้งรูปนั้นกลับเป็นช่องว่าง
+          removeBox.checked = Boolean(savedSrc);
+          restoreSaved();
+          if (removeBox.checked && undoButton) undoButton.focus();
+          else input.focus();
+        });
+      }
+      if (undoButton) {
+        undoButton.addEventListener("click", () => {
+          removeBox.checked = false;
+          restoreSaved();
+          if (clearButton && !clearButton.hidden) clearButton.focus();
+        });
+      }
+      syncControls();
     }
 
     input.addEventListener("change", () => {

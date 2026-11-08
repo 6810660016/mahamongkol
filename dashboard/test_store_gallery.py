@@ -81,6 +81,17 @@ class RenderTests(GalleryBase):
         slots = {s["slot"]: s["url"] for s in response.context["gallery_slots"]}
         self.assertEqual(slots, {1: "", 2: "https://example.com/p2.jpg", 3: "", 4: ""})
 
+    def test_each_slot_has_a_remove_button_and_undo_ready(self):
+        self.add_saved(2)
+        response = self.client.get(self.url)
+        for n in range(1, 5):
+            self.assertContains(response, f'aria-label="Remove photo {n}"')
+        # × ซ่อนไว้ก่อนเสมอ (JS เป็นคนแสดงเมื่อมีรูป) Undo ซ่อนไว้จนกว่าจะกด ×
+        self.assertContains(response, "data-gallery-clear aria-label", count=4)
+        self.assertContains(response, 'data-gallery-undo role="status" hidden', count=4)
+        # ช่องติ๊ก Remove ยังอยู่เป็น fallback ของคนที่ไม่มี JS และเป็นตัวส่งค่า gallery_remove
+        self.assertContains(response, 'name="gallery_remove"', count=4)
+
     def test_gallery_inputs_are_disabled_without_a_store(self):
         other = make_owner("no-store-owner")
         self.client.force_login(other)
