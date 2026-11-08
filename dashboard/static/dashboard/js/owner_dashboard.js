@@ -16,7 +16,6 @@
   const extraList = document.querySelector("[data-extra-list]");
   const search = document.querySelector("[data-store-search]");
   const emptyState = document.querySelector("[data-empty-state]");
-  const tableFields = form.querySelectorAll("[data-table-fields]");
 
   const createUrl = form.getAttribute("action");
   const csrfToken = form.elements.csrfmiddlewaretoken.value;
@@ -69,7 +68,7 @@
           <p class="owner-store-card__description">${escapeHTML(store.description || "No description added.")}</p>${extra}
           <div class="owner-store-card__actions">
             ${store.status === "draft" ? '<button type="button" data-action="publish">Publish</button>' : `<button type="button" data-action="toggle">${store.isOpen ? "Close store" : "Open store"}</button>`}
-            <button type="button" data-action="edit">Edit</button><button type="button" data-action="delete">Delete</button>
+            <a data-action="edit" href="${escapeHTML(store.urls.details)}">Edit</a><button type="button" data-action="delete">Delete</button>
           </div>
         </div>`;
       if (store.image) {
@@ -84,7 +83,6 @@
         postAction(store.urls.status, { status: "published" }));
       card.querySelector("[data-action='toggle']")?.addEventListener("click", () =>
         postAction(store.urls.status, { is_open: store.isOpen ? "0" : "1" }));
-      card.querySelector("[data-action='edit']").addEventListener("click", () => openEditor(store));
       card.querySelector("[data-action='delete']").addEventListener("click", () => {
         if (!window.confirm(`ลบร้าน “${store.name}” ?`)) return;
         postAction(store.urls.delete);
@@ -111,35 +109,19 @@
   function resetForm() {
     form.reset();
     form.action = createUrl;
-    tableFields.forEach((el) => { el.style.display = ""; });
     extraList.replaceChildren();
     document.querySelector("[data-dialog-title]").textContent = "Add a store";
     form.querySelector("[type='submit']").innerHTML = "<span aria-hidden='true'>＋</span> Save as draft";
   }
 
-  function openEditor(store = null) {
+  // The dialog only creates a store. Editing an existing store happens on the Store Details page.
+  function openCreateDialog() {
     resetForm();
-    if (store) {
-      form.action = store.urls.edit;
-      tableFields.forEach((el) => { el.style.display = "none"; });
-      document.querySelector("[data-dialog-title]").textContent = "Edit store";
-      form.elements.name.value = store.name;
-      form.elements.category.value = store.category;
-      form.elements.price.value = store.price || "";
-      form.elements.service_mode.value = store.serviceMode || "both";
-      form.elements.address.value = store.address || "";
-      form.elements.hours.value = store.hours || "";
-      form.elements.no_show_grace_minutes.value = store.noShowGraceMinutes ?? 30;
-      form.elements.image.value = store.image || "";
-      form.elements.description.value = store.description || "";
-      (store.extras || []).forEach((extra) => addExtraRow(extra.key, extra.value));
-      form.querySelector("[type='submit']").innerHTML = "<span aria-hidden='true'>✓</span> Save changes";
-    }
     dialog.showModal();
     form.elements.name.focus();
   }
 
-  document.querySelectorAll("[data-open-store]").forEach((button) => button.addEventListener("click", () => openEditor()));
+  document.querySelectorAll("[data-open-store]").forEach((button) => button.addEventListener("click", () => openCreateDialog()));
   document.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => dialog.close()));
   document.querySelector("[data-add-extra]").addEventListener("click", () => addExtraRow());
   document.querySelectorAll("[data-filter]").forEach((button) => button.addEventListener("click", () => {
@@ -155,6 +137,6 @@
   render();
 
   if (new URLSearchParams(window.location.search).get("add_store") === "1" && document.querySelector("[data-open-store]")) {
-    openEditor();
+    openCreateDialog();
   }
 })();
