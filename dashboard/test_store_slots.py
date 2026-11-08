@@ -224,3 +224,64 @@ class StoreDateScheduleTests(TestCase):
         )
         self.post([("12:00", 1, 2)], day=self.day)
         self.assertEqual(other_store.booking_slot_dates.count(), 1)
+
+
+class DefaultRowsAreNotSavedByAccidentTests(TestCase):
+    """Renaming the store must not silently switch it to its own slots."""
+
+    def setUp(self):
+        self.owner = make_owner("def-owner")
+        self.store = Restaurant.objects.create(
+            owner=self.owner, slug="def-store", name="Def Store", address="1 Rd"
+        )
+        for name, seats in (("T1", 2), ("T2", 2), ("T3", 2), ("T4", 8)):
+            self.store.tables.create(name=name, capacity=seats)
+        self.url = reverse("owner_store_details")
+        self.client.force_login(self.owner)
+
+    def default_rows(self):
+        return [(t, 4, 2, "1") for t in booking_services.SLOTS]
+
+    def test_posting_the_untouched_default_rows_saves_nothing(self):
+        data = {**valid_data(name="Renamed", address="1 Rd"), **slot_fields(*self.default_rows())}
+        response = self.client.post(self.url, data, **AJAX)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(BookingSlot.objects.exists())
+        self.store.refresh_from_db()
+        self.assertEqual(self.store.name, "Renamed")
+
+    def test_editing_a_row_does_save(self):
+        rows = self.default_rows()
+        rows[0] = (rows[0][0], 2, 2, "1")
+        data = {**valid_data(name="Def Store", address="1 Rd"), **slot_fields(*rows)}
+        self.client.post(self.url, data, **AJAX)
+        self.assertEqual(BookingSlot.objects.count(), len(rows))
+
+    def test_default_suggestion_uses_the_common_table_size(self):
+        shown = self.client.get(self.url).context["slot_rows"]
+        self.assertEqual({(r["table_count"], r["seats"]) for r in shown}, {(4, 2)})
+
+    def test_suggestion_never_exceeds_the_form_limits(self):
+        from restaurants.models import MAX_SEATS_PER_TABLE, MAX_TABLES_PER_SLOT
+
+        self.store.tables.all().delete()
+        for index in range(MAX_TABLES_PER_SLOT + 5):
+            self.store.tables.create(name=f"B{index}", capacity=MAX_SEATS_PER_TABLE + 4)
+        shown = self.client.get(self.url).context["slot_rows"]
+        self.assertTrue(all(r["table_count"] <= MAX_TABLES_PER_SLOT for r in shown))
+        self.assertTrue(all(r["seats"] <= MAX_SEATS_PER_TABLE for r in shown))
+
+    def test_unchanged_date_rows_are_not_saved_either(self):
+        day = timezone.localdate() + timedelta(days=2)
+        shown = self.client.get(reverse("owner_slots"), {"date": day.isoformat()}).json()["rows"]
+        rows = [(r["time"], r["table_count"], r["seats"], "1") for r in shown]
+        data = {**valid_data(name="Def Store", address="1 Rd"), **slot_fields(*rows), "slots_date": day.isoformat()}
+        self.client.post(self.url, data, **AJAX)
+        self.assertFalse(self.store.booking_slot_dates.exists())
+
+    def test_page_script_only_sends_slots_when_the_table_is_edited(self):
+        from pathlib import Path
+
+        source = Path("dashboard/static/dashboard/js/owner_store_details.js").read_text(encoding="utf-8")
+        self.assertIn("presentInput.disabled = !value", source)
+        self.assertContains(self.client.get(self.url), "data-slots-present")

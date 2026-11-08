@@ -182,8 +182,15 @@
 
   // ปฏิทิน: เลือกวันที่เพื่อกำหนดรอบเวลาเฉพาะวันนั้นล่วงหน้า (เลือกได้ตั้งแต่วันนี้จนถึงวันสุดท้ายที่ลูกค้าจองได้)
   // ไม่เลือกวัน = แก้รอบปกติของร้าน เลือกวัน = ตารางด้านซ้ายคือรอบของวันนั้น (แทนรอบปกติเฉพาะวันนั้น)
+  // slots_present บอกเซิร์ฟเวอร์ว่า "เจ้าของแก้ตาราง Time" จึงส่งเฉพาะเมื่อมีการแก้จริง
+  // แก้แค่ชื่อร้านแล้วกด Save จะไม่ไปบันทึกรอบเริ่มต้นลงฐานข้อมูล (ไม่ส่งช่องนี้ = ไม่แตะรอบเวลา)
+  const presentInput = form.querySelector("[data-slots-present]");
   let dirty = false;
-  function setDirty(value) { dirty = value; }
+  function setDirty(value) {
+    dirty = value;
+    if (presentInput) presentInput.disabled = !value;
+  }
+  setDirty(false);
   list.addEventListener("input", () => setDirty(true));
   list.addEventListener("change", () => setDirty(true));
   list.addEventListener("click", (event) => { if (event.target.closest("[data-remove-slot]")) setDirty(true); });

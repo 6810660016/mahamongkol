@@ -228,3 +228,46 @@ class BookingPageNextDayTests(SlotBookingBase):
         response = self.client.get(reverse("booking", args=[self.store.slug]))
         self.assertContains(response, "booking.js?v=")
         self.assertContains(response, f'data-shown-day="{self.today.isoformat()}"')
+
+
+class TableChoiceTests(SlotBookingBase):
+    """The table given to a booking must seat the party; smallest fitting table first."""
+
+    def setUp(self):
+        super().setUp()
+        self.slot.table_count = 3
+        self.slot.seats_per_table = 6
+        self.slot.save()
+
+    def test_party_never_gets_a_table_that_is_too_small(self):
+        small = self.store.tables.create(name="T1", capacity=2)
+        booking = self.book(self.users[0], guests=6)
+        self.assertNotEqual(booking.table_id, small.id)
+        self.assertGreaterEqual(booking.table.capacity, 6)
+
+    def test_smallest_fitting_table_and_natural_name_order(self):
+        self.store.tables.create(name="T10", capacity=4)
+        self.store.tables.create(name="T2", capacity=4)
+        self.store.tables.create(name="T3", capacity=8)
+        self.slot.seats_per_table = 8
+        self.slot.save()
+        self.assertEqual(self.book(self.users[0], guests=3).table.name, "T2")
+        self.assertEqual(self.book(self.users[1], guests=3).table.name, "T10")
+        self.assertEqual(self.book(self.users[2], guests=3).table.name, "T3")
+
+    def test_booked_tables_are_skipped(self):
+        self.store.tables.create(name="T1", capacity=6)
+        self.store.tables.create(name="T2", capacity=6)
+        first = self.book(self.users[0], guests=4)
+        second = self.book(self.users[1], guests=4)
+        self.assertNotEqual(first.table_id, second.table_id)
+
+
+class BookingJsFallbackTests(SlotBookingBase):
+    def test_script_restores_or_unlocks_instead_of_keeping_stale_states(self):
+        from pathlib import Path
+
+        source = Path("bookings/static/bookings/js/booking.js").read_text(encoding="utf-8")
+        self.assertIn("const fallback", source)
+        self.assertNotIn("unlockOtherDay", source)
+        self.assertIn("shownSelect", source)

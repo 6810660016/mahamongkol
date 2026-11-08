@@ -1,4 +1,5 @@
 import calendar
+import re
 from datetime import datetime, time, timedelta
 
 from django.conf import settings
@@ -147,6 +148,17 @@ def slot_options(restaurant, day, guests=None, now=None):
     return options
 
 
+def _natural_key(name):
+    """T2 before T10: split digits out so names sort the way people read them."""
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", name)]
+
+
+def _free_table(restaurant, booked, guests):
+    """The smallest free table that seats the party (ties: natural name order), or None."""
+    fitting = restaurant.tables.filter(capacity__gte=guests).exclude(id__in=booked)
+    return min(fitting, key=lambda t: (t.capacity, _natural_key(t.name)), default=None)
+
+
 def _next_table(restaurant, seats):
     """Add a table for slot bookings when the restaurant has fewer tables than a slot needs."""
     number = restaurant.tables.count() + 1
@@ -183,9 +195,8 @@ def _create_slot_booking(user, restaurant, day, slot_value, guests):
             booked = booked_table_ids(restaurant, day, slot_time)
             if len(booked) >= table_count:
                 raise BookingError(FULL_MESSAGE)
-            table = (
-                restaurant.tables.exclude(id__in=booked).order_by("name").first()
-                or _next_table(restaurant, seats_per_table)
+            table = _free_table(restaurant, booked, guests) or _next_table(
+                restaurant, seats_per_table
             )
             return Booking.objects.create(
                 user=user, table=table, date=day, time=slot_time, guests=guests

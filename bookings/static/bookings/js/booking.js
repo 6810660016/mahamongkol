@@ -58,12 +58,34 @@ document.addEventListener('DOMContentLoaded', () => {
     note.textContent = open.length ? '' : 'ไม่มีเวลาว่างในวันนี้ กรุณาเลือกวันอื่น';
   };
 
-  // ถ้าโหลดรอบของวันที่เลือกไม่ได้ ห้ามให้เวลาของ "วันอื่น" ที่เซิร์ฟเวอร์วาดไว้ (เช่นวันนี้ที่บางรอบผ่านไปแล้ว)
-  // ค้างเป็นกดไม่ได้ เปิดทุกรอบที่ไม่เต็มไว้ก่อน เซิร์ฟเวอร์จะตรวจซ้ำตอนกดยืนยันจอง
-  const unlockOtherDay = () => {
-    if (dateInput.value === form.dataset.shownDay) return;
-    form.querySelectorAll('select[name="time"] option, input[name="time-choice"]').forEach((el) => { el.disabled = false; });
-    form.querySelectorAll('.booking-slots label.is-unavailable').forEach((el) => el.classList.remove('is-unavailable'));
+  // เก็บรอบที่เซิร์ฟเวอร์วาดไว้ตอนโหลดหน้า (เป็นของวัน data-shown-day) ไว้คืนสภาพเมื่อกลับมาวันนั้น
+  const shownSelect = timeSelect ? timeSelect.innerHTML : '';
+  const shownButtons = buttons ? buttons.innerHTML : '';
+  const shownNote = note ? note.textContent : '';
+
+  // โหลดรอบของวันที่เลือกไม่สำเร็จ:
+  // - วันเดียวกับที่เซิร์ฟเวอร์วาด: คืนรอบตามที่วาดไว้ (ไม่ปล่อยสถานะของวันอื่นที่เคยเปิดไว้ค้าง)
+  // - วันอื่น: ไม่รู้ว่ารอบไหนเต็ม จึงเปิดทุกรอบที่โต๊ะพอสำหรับจำนวนคนไว้ก่อนแล้วบอกผู้ใช้
+  //   ว่าเซิร์ฟเวอร์จะตรวจซ้ำตอนกดยืนยันจอง (สถานะ "ผ่านไปแล้ว"/"เต็ม" ที่ค้างจากวันที่วาดไว้ใช้กับวันอื่นไม่ได้)
+  const fallback = () => {
+    if (!timeSelect || !buttons) return;
+    if (dateInput.value === form.dataset.shownDay) {
+      timeSelect.innerHTML = shownSelect;
+      buttons.innerHTML = shownButtons;
+      note.textContent = shownNote;
+    } else {
+      form.querySelectorAll('select[name="time"] option, input[name="time-choice"]').forEach((el) => { el.disabled = false; });
+      form.querySelectorAll('.booking-slots label.is-unavailable').forEach((label) => {
+        label.classList.remove('is-unavailable');
+        const small = label.querySelector('small');
+        if (small) small.remove();
+      });
+      timeSelect.querySelectorAll('option').forEach((option) => { option.textContent = option.value; });
+      note.textContent = 'โหลดรอบที่ว่างของวันนี้ไม่สำเร็จ ระบบจะตรวจอีกครั้งตอนกดยืนยันการจอง';
+    }
+    const current = [...timeSelect.options].find((option) => !option.disabled && option.value === timeSelect.value)
+      || [...timeSelect.options].find((option) => !option.disabled);
+    if (current) sync(current.value);
   };
 
   let request = 0;
@@ -74,10 +96,10 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const response = await fetch(`${form.dataset.slotsUrl}?${query}`, { credentials: 'same-origin' });
       if (id !== request) return;
-      if (!response.ok) { unlockOtherDay(); return; }
+      if (!response.ok) { fallback(); return; }
       render((await response.json()).slots);
     } catch (error) {
-      unlockOtherDay();
+      if (id === request) fallback();
     }
   };
   [dateInput, guestsSelect].forEach((input) => {

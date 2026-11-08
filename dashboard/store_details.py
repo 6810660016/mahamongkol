@@ -1,5 +1,6 @@
 """ส่วนช่วยของหน้า Store Details: เตรียมข้อมูลสำหรับวาดหน้า และบันทึกเมื่อกด Save"""
 
+from collections import Counter
 from datetime import date, time
 
 from django.contrib import messages
@@ -96,11 +97,36 @@ def _slot_rows(restaurant):
             }
             for slot in saved
         ]
-    tables = restaurant.tables.count() or 4
-    seats = max((t.capacity for t in restaurant.tables.all()), default=4)
+    # ค่าเริ่มต้นเป็นแค่ข้อเสนอให้เจ้าของแก้: จำนวนโต๊ะ = โต๊ะที่มี, คนต่อโต๊ะ = ขนาดที่พบบ่อยสุด
+    # (เท่ากันเอาขนาดเล็ก เพื่อไม่รับกลุ่มใหญ่เกินจริง) และไม่เกินเพดานของช่องในฟอร์ม
+    # ไม่เช่นนั้นช่องจะเกิน max แล้วฟอร์มส่งไม่ได้
+    capacities = Counter(t.capacity for t in restaurant.tables.all())
+    seats = min(
+        min(capacities, key=lambda c: (-capacities[c], c), default=4), MAX_SEATS_PER_TABLE
+    )
+    tables = min(restaurant.tables.count() or 4, MAX_TABLES_PER_SLOT)
     return [
         {"time": value, "table_count": tables, "seats": seats, "available": True}
         for value in booking_services.SLOTS
+    ]
+
+
+def _slots_unchanged(restaurant, day, rows):
+    """True when the posted rows are exactly the default rows the page drew for a schedule
+    the owner never saved. Saving them would silently switch the store to its own slots
+    (e.g. just because the owner renamed the store), so they are skipped."""
+    if day is not None:
+        shown, source = day_slot_rows(restaurant, day)
+        saved = source == "date"
+    else:
+        shown, saved = _slot_rows(restaurant), restaurant.booking_slots.exists()
+    if saved:
+        return False
+    return [
+        (r["time"], r["table_count"], r["seats"], r["available"]) for r in shown
+    ] == [
+        (f"{r['time']:%H:%M}", r["table_count"], r["seats_per_table"], r["is_available"])
+        for r in rows
     ]
 
 
@@ -281,10 +307,11 @@ def save_store_details(request, restaurant):
             gallery_files=gallery_files,
             gallery_removals=_gallery_removals(request),
         )
-        if slots_present and slots_day is not None:
-            services.replace_date_slots(restaurant, request.user, slots_day, slot_rows)
-        elif slots_present:
-            services.replace_booking_slots(restaurant, request.user, slot_rows)
+        if slots_present and not _slots_unchanged(restaurant, slots_day, slot_rows):
+            if slots_day is not None:
+                services.replace_date_slots(restaurant, request.user, slots_day, slot_rows)
+            else:
+                services.replace_booking_slots(restaurant, request.user, slot_rows)
     except services.RestaurantError as exc:
         if wants_json:
             # ชี้ช่องรูปหลักเฉพาะเมื่ออัปโหลดแค่รูปเดียว (ถ้าอัปโหลดหลายรูปจะบอกไม่ได้ว่ารูปไหนพัง)
