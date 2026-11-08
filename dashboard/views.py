@@ -74,10 +74,8 @@ def owner_dashboard_view(request):
             "serviceMode": store.service_mode,
             "extras": store.extra_details,
             "urls": {
-                "edit": reverse(
-                    "owner_store_update",
-                    args=[store.slug],
-                ),
+                # 1 บัญชี = 1 ร้าน หน้า Store Details จึงไม่ต้องใช้ slug
+                "details": reverse("owner_store_details"),
                 "status": reverse(
                     "owner_store_status",
                     args=[store.slug],

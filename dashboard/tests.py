@@ -159,5 +159,5 @@ class OneStorePerOwnerTests(TestCase):
                 response = self.client.get(reverse(name))
                 self.assertNotContains(response, "data-open-store")
                 self.assertNotContains(response, "add_store=1")
-                if name != "owner_dashboard":  # หน้า dashboard ยังมี dialog ที่ใช้แก้ร้านด้วย
+                if name != "owner_dashboard":  # หน้า dashboard ยังมี dialog สร้างร้าน (ซ่อนอยู่ ข้อความ Add a store จึงยังอยู่ใน HTML)
                     self.assertNotContains(response, "Add a store")
