@@ -7,7 +7,7 @@ from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.utils.text import slugify
 
-from .models import Restaurant, Table
+from .models import MAX_GALLERY_IMAGES, Restaurant, RestaurantImage, Table
 
 logger = logging.getLogger(__name__)
 
@@ -126,25 +126,80 @@ def update_restaurant(restaurant, by_user, data, *, extra_details=None):
     return restaurant
 
 
-def update_restaurant_with_image(
-    restaurant, by_user, data, uploaded_file=None, *, extra_details=None
-):
-    """แก้ข้อมูลร้านพร้อมรูปใหม่ (ถ้ามี) ลำดับ: อัปโหลดรูปใหม่ -> บันทึก DB -> ลบรูปเก่า
+def _apply_gallery(restaurant, new_images, removals):
+    """แทนที่/เพิ่ม/ลบรูปในช่อง Pictures (ต้องเรียกภายใน transaction.atomic)
 
-    ถ้าบันทึก DB ไม่สำเร็จ (error อะไรก็ตาม) จะลบรูปใหม่ที่เพิ่งอัปโหลดทิ้ง แล้ว raise ต่อ
-    รูปเดิมและข้อมูลเดิมจึงไม่เปลี่ยน และไม่มีรูปใหม่ค้างบน Cloudinary
+    new_images: {slot: (url, public_id)} รูปที่อัปโหลดขึ้น Cloudinary แล้ว
+    removals: ช่องที่เจ้าของสั่งลบ (ช่องที่มีรูปใหม่ใน request เดียวกันถือว่าเป็นการแทนที่)
+    รูปเก่าที่ถูกแทนที่/ลบจะถูกลบบน Cloudinary หลัง commit เท่านั้น
+    """
+    existing = {image.slot: image for image in restaurant.gallery_images.all()}
+    old_public_ids = []
+
+    for slot, (url, public_id) in new_images.items():
+        image = existing.get(slot)
+        if image is None:
+            RestaurantImage.objects.create(
+                restaurant=restaurant, slot=slot, image=url, public_id=public_id
+            )
+            continue
+        old_public_ids.append(image.public_id)
+        image.image, image.public_id = url, public_id
+        image.save(update_fields=["image", "public_id"])
+
+    for slot in removals:
+        image = existing.get(slot)
+        if image is None or slot in new_images:
+            continue
+        old_public_ids.append(image.public_id)
+        image.delete()
+
+    for public_id in old_public_ids:
+        if public_id:
+            transaction.on_commit(partial(delete_cloudinary_image, public_id))
+
+
+def update_restaurant_with_image(
+    restaurant,
+    by_user,
+    data,
+    uploaded_file=None,
+    *,
+    extra_details=None,
+    gallery_files=None,
+    gallery_removals=(),
+):
+    """แก้ข้อมูลร้านพร้อมรูปหลักและรูป Pictures ใน request เดียว
+
+    ลำดับ: อัปโหลดรูปใหม่ทั้งหมด -> บันทึก DB ใน transaction เดียว -> ลบรูปเก่า (หลัง commit)
+    gallery_files: {slot: ไฟล์} gallery_removals: ช่องที่สั่งลบ
+    ถ้าขั้นไหนไม่สำเร็จ (error อะไรก็ตาม) จะลบรูปใหม่ที่อัปโหลดไปแล้วทั้งหมดทิ้ง แล้ว raise ต่อ
+    ข้อมูลเดิมและรูปเดิมจึงไม่เปลี่ยน และไม่มีรูปใหม่ค้างบน Cloudinary
     """
     data = dict(data)
-    new_public_id = ""
-    if uploaded_file is not None:
-        data["image"], new_public_id = upload_store_image(restaurant, by_user, uploaded_file)
-        data["image_public_id"] = new_public_id
+    uploaded_public_ids = []
+    new_gallery = {}
     try:
-        return update_restaurant(restaurant, by_user, data, extra_details=extra_details)
+        if uploaded_file is not None:
+            data["image"], public_id = upload_store_image(restaurant, by_user, uploaded_file)
+            data["image_public_id"] = public_id
+            uploaded_public_ids.append(public_id)
+        for slot, file in sorted((gallery_files or {}).items()):
+            if not 1 <= slot <= MAX_GALLERY_IMAGES:
+                raise RestaurantError("ช่องรูปภาพไม่ถูกต้อง")
+            url, public_id = upload_store_image(restaurant, by_user, file)
+            new_gallery[slot] = (url, public_id)
+            uploaded_public_ids.append(public_id)
+
+        with transaction.atomic():
+            update_restaurant(restaurant, by_user, data, extra_details=extra_details)
+            _apply_gallery(restaurant, new_gallery, set(gallery_removals))
     except Exception:
-        if new_public_id:
-            delete_cloudinary_image(new_public_id)
+        for public_id in uploaded_public_ids:
+            if public_id:
+                delete_cloudinary_image(public_id)
         raise
+    return restaurant
 
 
 def set_status(restaurant, by_user, *, status=None, is_open=None):
@@ -223,7 +278,10 @@ def delete_cloudinary_image(public_id):
     if not public_id or not public_id.startswith(f"{CLOUDINARY_FOLDER}/"):
         return False
     try:
-        if Restaurant.objects.filter(image_public_id=public_id).exists():
+        if (
+            Restaurant.objects.filter(image_public_id=public_id).exists()
+            or RestaurantImage.objects.filter(public_id=public_id).exists()
+        ):
             return False
         result = cloudinary.uploader.destroy(
             public_id, resource_type="image", invalidate=True

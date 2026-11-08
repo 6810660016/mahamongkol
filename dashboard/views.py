@@ -14,7 +14,7 @@ from bookings import services as booking_services
 from bookings.models import Booking
 from restaurants import services
 from restaurants.forms import MAX_EXTRAS, PRICE_CHOICES, RestaurantForm
-from restaurants.models import Restaurant
+from restaurants.models import MAX_GALLERY_IMAGES, Restaurant
 
 
 @customer_ui_required
@@ -137,6 +137,32 @@ def _posted_extras(request):
     ][:MAX_EXTRAS]
 
 
+def _gallery_slots(restaurant, errors=None):
+    """ช่อง Pictures ทั้งหมด (1..MAX_GALLERY_IMAGES) พร้อมรูปที่บันทึกไว้ (ว่าง = "")
+    และข้อความ error ของช่อง (ถ้ามี) ใช้วาดหน้าและตอบ JSON หลังบันทึก"""
+    saved = {}
+    if restaurant is not None:
+        saved = {image.slot: image.image for image in restaurant.gallery_images.all()}
+    errors = errors or {}
+    return [
+        {
+            "slot": slot,
+            "url": saved.get(slot, ""),
+            "error": " ".join(errors.get(f"gallery_file_{slot}", [])),
+        }
+        for slot in range(1, MAX_GALLERY_IMAGES + 1)
+    ]
+
+
+def _gallery_removals(request):
+    """ช่องที่เจ้าของติ๊ก Remove (ค่าที่ไม่ใช่เลขช่องที่ถูกต้องจะถูกข้าม)"""
+    slots = set()
+    for raw in request.POST.getlist("gallery_remove"):
+        if raw.isdigit() and 1 <= int(raw) <= MAX_GALLERY_IMAGES:
+            slots.add(int(raw))
+    return slots
+
+
 def _render_store_details(request, restaurant, *, values=None, errors=None, extras=None):
     return render(
         request,
@@ -147,6 +173,7 @@ def _render_store_details(request, restaurant, *, values=None, errors=None, extr
             "errors": {f: " ".join(msgs) for f, msgs in (errors or {}).items()},
             "extras": _store_extras(restaurant) if extras is None else extras,
             "max_extras": MAX_EXTRAS,
+            "gallery_slots": _gallery_slots(restaurant, errors),
             "category_choices": Restaurant.Category.choices,
             "price_choices": PRICE_CHOICES,
             "service_mode_choices": Restaurant.ServiceMode.choices,
@@ -195,6 +222,19 @@ def _save_store_details(request, restaurant):
         except services.RestaurantError as exc:
             errors["image_file"] = [str(exc)]
 
+    # รูปในช่อง Pictures: gallery_file_1..N (ตรวจทุกไฟล์ก่อนอัปโหลดอะไรขึ้น Cloudinary)
+    gallery_files = {}
+    for slot in range(1, MAX_GALLERY_IMAGES + 1):
+        file = request.FILES.get(f"gallery_file_{slot}")
+        if not file:
+            continue
+        try:
+            services.validate_image_upload(file)
+        except services.RestaurantError as exc:
+            errors[f"gallery_file_{slot}"] = [str(exc)]
+        else:
+            gallery_files[slot] = file
+
     if not form_valid or errors:
         message = "ยังไม่ได้บันทึก กรุณาตรวจสอบช่องที่มีข้อความแจ้งเตือน"
         if wants_json:
@@ -223,10 +263,15 @@ def _save_store_details(request, restaurant):
             data,
             image_file,
             extra_details=data["extras"] if extras_present else None,
+            gallery_files=gallery_files,
+            gallery_removals=_gallery_removals(request),
         )
     except services.RestaurantError as exc:
         if wants_json:
-            upload_errors = {"image_file": [str(exc)]} if image_file else {}
+            # ชี้ช่องรูปหลักเฉพาะเมื่ออัปโหลดแค่รูปเดียว (ถ้าอัปโหลดหลายรูปจะบอกไม่ได้ว่ารูปไหนพัง)
+            upload_errors = (
+                {"image_file": [str(exc)]} if image_file and not gallery_files else {}
+            )
             return JsonResponse(
                 {"ok": False, "error": str(exc), "errors": upload_errors}, status=400
             )
@@ -243,6 +288,9 @@ def _save_store_details(request, restaurant):
                 "image_url": restaurant.image,
                 "extras": _store_extras(restaurant),
                 "no_show_grace_minutes": restaurant.no_show_grace_minutes,
+                "gallery": [
+                    {"slot": g["slot"], "url": g["url"]} for g in _gallery_slots(restaurant)
+                ],
             }
         )
     messages.success(request, message)

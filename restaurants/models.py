@@ -1,7 +1,8 @@
 from django.conf import settings
-from django.core.validators import MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+MAX_GALLERY_IMAGES = 4  # จำนวนช่อง Pictures บนหน้า Store Details
 DEFAULT_NO_SHOW_GRACE_MINUTES = 30
 MAX_NO_SHOW_GRACE_MINUTES = 240
 
@@ -78,6 +79,32 @@ class Restaurant(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class RestaurantImage(models.Model):
+    """รูปในส่วน Pictures ของร้าน (แยกจากรูปหลัก Restaurant.image) ร้านละไม่เกิน MAX_GALLERY_IMAGES รูป"""
+
+    restaurant = models.ForeignKey(
+        Restaurant, on_delete=models.CASCADE, related_name="gallery_images"
+    )
+    # ช่องที่ 1..MAX_GALLERY_IMAGES บนหน้า Store Details (ช่องว่างข้ามได้ เช่น มีแค่ช่อง 1 กับ 3)
+    slot = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_GALLERY_IMAGES)]
+    )
+    image = models.URLField()
+    # public_id บน Cloudinary ใช้ลบรูปเก่าตอนแทนที่/ลบ ว่างได้ถ้าไม่ใช่รูปที่อัปโหลดผ่านระบบ
+    public_id = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ("slot",)
+        constraints = (
+            models.UniqueConstraint(
+                fields=("restaurant", "slot"), name="unique_gallery_slot_per_restaurant"
+            ),
+        )
+
+    def __str__(self):
+        return f"{self.restaurant} #{self.slot}"
 
 
 class Table(models.Model):

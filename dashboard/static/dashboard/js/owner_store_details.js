@@ -9,40 +9,52 @@
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
   const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-  // รูปโปรไฟล์: เลือกแล้วแสดงแค่ preview ยังไม่ส่งอะไรไปเซิร์ฟเวอร์
+  // รูปโปรไฟล์และรูป Pictures ทำงานเหมือนกัน: เลือกแล้วแสดงแค่ preview ยังไม่ส่งอะไรไปเซิร์ฟเวอร์
   // ไฟล์จะถูกส่งไปพร้อมข้อมูลร้านตอนกด Save เท่านั้น (เซิร์ฟเวอร์ตรวจไฟล์ซ้ำเสมอ)
+  // ช่อง Pictures มีช่องติ๊ก "Remove photo" ใช้ลบรูปที่บันทึกไว้แล้ว (ส่งเป็น gallery_remove)
   let profile = null; // { commit(url) } ใช้หลังบันทึกสำเร็จ
+  const gallery = {}; // { slot: { commit(url) } }
   form.querySelectorAll("[data-image-input]").forEach((input) => {
     const box = input.closest(".store-upload");
     const image = box.querySelector("img");
     const label = box.querySelector("[data-image-label]");
     const isProfile = input.hasAttribute("data-profile-input");
-    let savedSrc = isProfile ? image.getAttribute("src") : null;
+    const slotBox = input.closest("[data-gallery-slot]");
+    const removeLabel = slotBox ? slotBox.querySelector("[data-gallery-remove-label]") : null;
+    const removeBox = slotBox ? slotBox.querySelector("[data-gallery-remove]") : null;
+    let savedSrc = image.getAttribute("src");
     let previewUrl;
 
     const showImage = (src) => { image.src = src; image.hidden = false; label.hidden = true; };
     const showEmpty = () => { image.removeAttribute("src"); image.hidden = true; label.hidden = false; };
-    const restoreSaved = () => { if (savedSrc) showImage(savedSrc); else showEmpty(); };
+    // ติ๊ก Remove อยู่ = แสดงช่องว่าง (รูปจริงจะถูกลบตอนกด Save)
+    const restoreSaved = () => { if (savedSrc && !(removeBox && removeBox.checked)) showImage(savedSrc); else showEmpty(); };
     const clearPreview = () => { if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; } };
+    const syncRemoveLabel = () => { if (removeLabel) removeLabel.hidden = !savedSrc; };
 
-    if (isProfile) {
-      // บันทึกสำเร็จ: รูปที่เลือกกลายเป็นรูปที่บันทึกแล้ว และล้างไฟล์ออกจาก input กันอัปโหลดซ้ำ
-      profile = { commit(url) { if (url) savedSrc = url; input.value = ""; clearPreview(); restoreSaved(); } };
+    // บันทึกสำเร็จ: รูปที่เลือกกลายเป็นรูปที่บันทึกแล้ว (หรือถูกลบถ้า url ว่าง) และล้างไฟล์/ช่องติ๊กออก กันส่งซ้ำ
+    const commit = (url) => {
+      savedSrc = url || null;
+      input.value = "";
+      if (removeBox) removeBox.checked = false;
+      clearPreview(); restoreSaved(); syncRemoveLabel();
+    };
+    if (isProfile) profile = { commit: (url) => { if (url) commit(url); else { input.value = ""; clearPreview(); restoreSaved(); } } };
+    if (slotBox) gallery[slotBox.dataset.gallerySlot] = { commit };
+
+    if (removeBox) {
+      removeBox.addEventListener("change", () => {
+        if (removeBox.checked) { input.value = ""; clearPreview(); }
+        setError(input.name, "");
+        restoreSaved();
+      });
     }
 
     input.addEventListener("change", () => {
       const file = input.files[0];
       clearPreview();
-
-      // ช่องรูปแกลเลอรี่ยังเป็น preview เท่านั้น (ไม่มี name จึงไม่ถูกส่ง)
-      if (!isProfile) {
-        if (!file) { showEmpty(); return; }
-        previewUrl = URL.createObjectURL(file);
-        showImage(previewUrl);
-        return;
-      }
-
-      setError("image_file", "");
+      setError(input.name, "");
+      if (removeBox) removeBox.checked = false; // เลือกไฟล์ใหม่ = แทนที่รูปเดิม ไม่ใช่ลบ
       if (!file) { restoreSaved(); return; }
       if (!IMAGE_TYPES.includes(file.type)) { announce("รองรับเฉพาะไฟล์รูป JPG, PNG หรือ WebP เท่านั้น"); input.value = ""; restoreSaved(); return; }
       if (file.size > MAX_IMAGE_BYTES) { announce("ไฟล์รูปต้องมีขนาดไม่เกิน 5 MB"); input.value = ""; restoreSaved(); return; }
@@ -138,6 +150,7 @@
       if (response.ok && payload && payload.ok) {
         if (profile) profile.commit(payload.image_url);
         if (Array.isArray(payload.extras)) renderExtras(payload.extras);
+        if (Array.isArray(payload.gallery)) payload.gallery.forEach((item) => { if (gallery[item.slot]) gallery[item.slot].commit(item.url); });
         const chip = document.querySelector("[data-store-name-chip]");
         if (chip && payload.name) chip.textContent = payload.name;
         announce(payload.message || "บันทึกเรียบร้อยแล้ว");
