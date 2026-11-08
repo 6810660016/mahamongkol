@@ -85,7 +85,7 @@ class RenderTests(GalleryBase):
         response = self.client.get(self.url)
         for n in range(1, 5):
             self.assertContains(response, f'aria-label="Remove photo {n}"')
-        # × ซ่อนไว้ก่อนเสมอ (JS เป็นคนแสดงเมื่อมีรูป) Undo ซ่อนไว้จนกว่าจะกด ×
+        # ปุ่มกากบาทซ่อนไว้ก่อนเสมอ (JS เป็นคนแสดงเมื่อมีรูป) Undo ซ่อนไว้จนกว่าจะกดกากบาท
         self.assertContains(response, "data-gallery-clear aria-label", count=4)
         self.assertContains(response, 'data-gallery-undo role="status" hidden', count=4)
         # ช่องติ๊ก Remove ยังอยู่เป็น fallback ของคนที่ไม่มี JS และเป็นตัวส่งค่า gallery_remove
