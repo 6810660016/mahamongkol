@@ -65,3 +65,12 @@
 .settings-confirm__actions .button { min-height: 42px; padding: 0 20px; border-radius: 999px; font-size: .76rem; }
 .settings-confirm__cancel { min-height: 42px; padding: 0 18px; border: 1px solid #ded8cc; border-radius: 999px; color: #4d4b44; background: transparent; font: inherit; font-size: .76rem; font-weight: 600; cursor: pointer; }
 .settings-confirm__cancel:hover { background: #f4f2ec; }
+
+/* Larger profile summary: avatar + big display name, @username, then "Member profile". */
+.profile-summary { gap: 20px; padding: 26px 0 22px; }
+.profile-summary .profile-avatar { flex: 0 0 auto; width: 92px; height: 92px; font-size: 2.3rem; }
+.profile-summary__text { min-width: 0; }
+.profile-summary__text strong { font-family: Merriweather, serif; font-size: 1.7rem; line-height: 1.2; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.profile-summary__text .profile-summary__handle { margin-top: 6px; color: var(--green); font-size: .95rem; font-weight: 600; }
+.profile-summary__text .profile-summary__role { margin-top: 4px; font-size: .74rem; }
+@media (max-width: 560px) { .profile-summary { gap: 14px; }.profile-summary .profile-avatar { width: 68px; height: 68px; font-size: 1.7rem; }.profile-summary__text strong { font-size: 1.3rem; } }
