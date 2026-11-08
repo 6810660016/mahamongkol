@@ -114,3 +114,31 @@ class SettingsPageTests(TestCase):
         self.post({'name': 'Somchai Jaidee'})
         other.refresh_from_db()
         self.assertEqual(other.first_name, '')
+
+    def test_username_is_shown_as_handle_under_the_display_name(self):
+        self.post({'name': 'Somchai Jaidee'})
+        html = self.client.get(self.url).content.decode()
+        name_at = html.index('<strong>Somchai Jaidee</strong>')
+        handle_at = html.index('@somchai</small>')
+        self.assertLess(name_at, handle_at)
+        self.assertLess(handle_at - name_at, 120)  # right under the name, in the same block
+
+    def test_handle_is_shown_even_when_no_display_name_is_set(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, '@somchai</small>')
+        self.assertContains(response, 'Member profile')
+
+    def test_member_profile_label_comes_after_the_handle(self):
+        html = self.client.get(self.url).content.decode()
+        self.assertLess(html.index('@somchai</small>'), html.index('Member profile'))
+
+    def test_username_is_shown_in_a_read_only_field_above_email(self):
+        html = self.client.get(self.url).content.decode()
+        self.assertRegex(html, r'id="settings-username"[^>]*value="somchai"[^>]*readonly')
+        self.assertLess(html.index('id="settings-username"'), html.index('id="settings-email"'))
+
+    def test_username_cannot_be_changed_from_the_form(self):
+        self.post({'name': 'Somchai Jaidee', 'username': 'hacker'})
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, 'somchai')
+        self.assertContains(self.client.get(self.url), '@somchai')

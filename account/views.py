@@ -398,6 +398,7 @@ def settings_view(request):
         saved = True
     return render(request, 'account/settings.html', {
         'display_name': user.first_name or user.username,
+        'username': user.get_username(),
         'name_value': user.first_name,
         'email': user.email,
         'name_max_length': SETTINGS_NAME_MAX_LENGTH,
