@@ -3,6 +3,9 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 MAX_GALLERY_IMAGES = 4  # จำนวนช่อง Pictures บนหน้า Store Details
+MAX_BOOKING_SLOTS = 20  # รอบเวลาจองต่อร้าน
+MAX_TABLES_PER_SLOT = 100
+MAX_SEATS_PER_TABLE = 12
 DEFAULT_NO_SHOW_GRACE_MINUTES = 30
 MAX_NO_SHOW_GRACE_MINUTES = 240
 
@@ -125,6 +128,69 @@ class Table(models.Model):
 
     def __str__(self):
         return f"{self.restaurant.name} · {self.name} ({self.capacity} seats)"
+
+
+class BookingSlot(models.Model):
+    """รอบเวลาจองที่เจ้าของร้านกำหนด: จำนวนโต๊ะและจำนวนที่นั่งต่อโต๊ะของรอบนั้น
+
+    ร้านที่ยังไม่มีรอบเลยจะใช้รอบและโต๊ะแบบเดิม (bookings.services.SLOTS) จึงไม่กระทบร้านเก่า
+    """
+
+    restaurant = models.ForeignKey(
+        Restaurant, on_delete=models.CASCADE, related_name="booking_slots"
+    )
+    time = models.TimeField()
+    table_count = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_TABLES_PER_SLOT)]
+    )
+    seats_per_table = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_SEATS_PER_TABLE)]
+    )
+    is_available = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("time",)
+        constraints = (
+            models.UniqueConstraint(
+                fields=("restaurant", "time"), name="unique_booking_slot_time_per_restaurant"
+            ),
+        )
+
+    def __str__(self):
+        return f"{self.restaurant} {self.time:%H:%M} ({self.table_count} tables x {self.seats_per_table} seats)"
+
+
+class BookingSlotDate(models.Model):
+    """รอบเวลาจองของ "วันที่ระบุ" ที่เจ้าของกำหนดล่วงหน้าจากปฏิทิน
+
+    ถ้าวันนั้นมีแถวอยู่ แถวเหล่านี้จะแทนที่รอบปกติของร้านทั้งหมดสำหรับวันนั้น
+    (ปิดรอบ = ติ๊ก Available ออก, ลบทุกแถว = กลับไปใช้รอบปกติ)
+    """
+
+    restaurant = models.ForeignKey(
+        Restaurant, on_delete=models.CASCADE, related_name="booking_slot_dates"
+    )
+    date = models.DateField()
+    time = models.TimeField()
+    table_count = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_TABLES_PER_SLOT)]
+    )
+    seats_per_table = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(MAX_SEATS_PER_TABLE)]
+    )
+    is_available = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("date", "time")
+        constraints = (
+            models.UniqueConstraint(
+                fields=("restaurant", "date", "time"),
+                name="unique_booking_slot_date_time_per_restaurant",
+            ),
+        )
+
+    def __str__(self):
+        return f"{self.restaurant} {self.date} {self.time:%H:%M}"
 
 
 class Review(models.Model):
