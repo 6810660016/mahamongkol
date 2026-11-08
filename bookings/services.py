@@ -50,6 +50,19 @@ def parse_slot(value):
     return time.fromisoformat(value)
 
 
+def slot_times_for_day(restaurant, day):
+    """Every time the owner should see on that date, as sorted "HH:MM" strings.
+
+    The restaurant's configured times for the date (default times when it set none),
+    plus any time that already has a booking, so nothing booked ever disappears from view.
+    """
+    custom = day_slots(restaurant, day)
+    times = {f"{t:%H:%M}" for t, *_ in custom} if custom is not None else set(SLOTS)
+    booked = Booking.objects.filter(table__restaurant=restaurant, date=day)
+    times |= {f"{t:%H:%M}" for t in booked.values_list("time", flat=True)}
+    return sorted(times)
+
+
 def can_manage(user, restaurant):
     """Admins manage every restaurant; owners manage only their own."""
     if not user.is_authenticated:

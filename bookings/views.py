@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time
 from urllib.parse import urlencode
 
 from django.core.exceptions import PermissionDenied
@@ -157,9 +157,10 @@ def manage_bookings_view(request, slug):
     except ValueError:
         day = timezone.localdate()
     slot_value = request.GET.get("time", "")
-    if slot_value not in services.SLOTS:
-        slot_value = services.SLOTS[0]
-    slot = services.parse_slot(slot_value)
+    slot_times = services.slot_times_for_day(restaurant, day)
+    if slot_value not in slot_times:
+        slot_value = slot_times[0]
+    slot = time.fromisoformat(slot_value)
 
     booked = {
         booking.table_id: booking
@@ -194,7 +195,7 @@ def manage_bookings_view(request, slug):
             "restaurant": restaurant,
             "day": day,
             "slot": slot_value,
-            "slots": services.SLOTS,
+            "slots": slot_times,
             "rows": rows,
             "booked_count": len(booked),
             "table_count": len(rows),

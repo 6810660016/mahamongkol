@@ -69,6 +69,27 @@ def _chart(counts_by_day, days, today):
     }
 
 
+MAX_POPULAR_BARS = 8
+
+
+def _popular_slots(restaurant, slot_counts):
+    """(time, bookings) bars: the store's own times (default times if it set none) plus any
+    time that was actually booked. Beyond MAX_POPULAR_BARS keep the busiest, in time order."""
+    configured = set()
+    if restaurant is not None:
+        configured |= {f"{t:%H:%M}" for t in restaurant.booking_slots.values_list("time", flat=True)}
+        configured |= {
+            f"{t:%H:%M}" for t in restaurant.booking_slot_dates.values_list("time", flat=True)
+        }
+    if not configured:
+        configured = set(booking_services.SLOTS)
+    times = sorted(configured | set(slot_counts))
+    if len(times) > MAX_POPULAR_BARS:
+        busiest = sorted(times, key=lambda t: (-slot_counts.get(t, 0), t))[:MAX_POPULAR_BARS]
+        times = sorted(busiest)
+    return [(t, slot_counts.get(t, 0)) for t in times]
+
+
 def owner_overview_stats(restaurant, days=DEFAULT_RANGE, today=None):
     today = today or timezone.localdate()
     bookings = Booking.objects.filter(table__restaurant=restaurant) if restaurant else Booking.objects.none()
@@ -87,7 +108,7 @@ def owner_overview_stats(restaurant, days=DEFAULT_RANGE, today=None):
     )
 
     slot_counts = Counter(f"{t:%H:%M}" for t in active.values_list("time", flat=True))
-    slots = [(slot, slot_counts.get(slot, 0)) for slot in booking_services.SLOTS]
+    slots = _popular_slots(restaurant, slot_counts)
     peak_slot = max((count for _, count in slots), default=0)
 
     guest_counts = Counter(_guest_bucket(g) for g in active.values_list("guests", flat=True))
