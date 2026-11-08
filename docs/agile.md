@@ -1,6 +1,6 @@
 # Agile: Velocity และ Burndown
 
-ข้อมูล ณ วันที่ 8 พ.ย. 2026 จาก issue และ PR ของ repo นี้
+ผลสุดท้ายของโปรเจกต์ (จบ Sprint 3 วันที่ 8 พ.ย. 2026) จาก issue และ PR ของ repo นี้
 และ [GitHub Projects board ของทีม](https://github.com/users/6810660016/projects/1)
 ดูแบบ interactive ได้ที่ [dashboard](https://claude.ai/artifact/Nw3kLKjPYEVj3Mqraet61n)
 
@@ -41,7 +41,7 @@
 | Sprint 2 | 1 พ.ย. 27 → 4 พ.ย. 10 → 5 พ.ย. 0 |
 | Sprint 3 | 5 พ.ย. 70 → 7 พ.ย. 51 → 8 พ.ย. 16 → สิ้นวันที่ 8 พ.ย. 13 |
 
-งานที่ยังเหลือใน Sprint 3 (13 points) คือ
+งานที่ไม่เสร็จใน Sprint 3 (13 points) คือ
 #62 เตรียมเดโม (2), #63 Deploy (5), #64 เอกสาร (3) และ #105 ตั้งค่า production (3)
 
 ## นับ points อย่างไร
