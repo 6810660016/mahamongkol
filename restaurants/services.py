@@ -231,11 +231,9 @@ def _looks_like_image(uploaded_file):
     uploaded_file.seek(0)
     head = uploaded_file.read(12)
     uploaded_file.seek(0)
-    return (
-        head.startswith(b"\xff\xd8\xff")  # JPEG
-        or head.startswith(b"\x89PNG\r\n\x1a\n")  # PNG
-        or (head[:4] == b"RIFF" and head[8:12] == b"WEBP")  # WebP
-    )
+    is_jpeg_or_png = head.startswith((b"\xff\xd8\xff", b"\x89PNG\r\n\x1a\n"))
+    is_webp = head[:4] == b"RIFF" and head[8:12] == b"WEBP"
+    return is_jpeg_or_png or is_webp
 
 
 def validate_image_upload(uploaded_file):
@@ -286,7 +284,7 @@ def delete_cloudinary_image(public_id):
         result = cloudinary.uploader.destroy(
             public_id, resource_type="image", invalidate=True
         )
-    except Exception:  # noqa: BLE001 - ลบไม่สำเร็จต้องไม่ทำให้ผู้ใช้เห็น error
+    except Exception:
         logger.exception("Could not delete Cloudinary image %s", public_id)
         return False
     if result.get("result") not in ("ok", "not found"):

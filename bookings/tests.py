@@ -6,7 +6,6 @@ from django.urls import reverse
 
 User = get_user_model()
 
-from django.urls import reverse
 class BookingFlowTests(TestCase):
     def setUp(self):
         self.customer = User.objects.create_user(

@@ -12,7 +12,14 @@ from django.db import DatabaseError
 from restaurants import services
 from restaurants.models import Restaurant
 
-from .store_test_utils import NEW_URL, OLD_URL, UPLOAD_PATH, image_file, make_owner, valid_data
+from .store_test_utils import (
+    NEW_URL,
+    OLD_URL,
+    UPLOAD_PATH,
+    image_file,
+    make_owner,
+    valid_data,
+)
 from .test_store_details_save import StoreDetailsSaveBase
 
 DESTROY_PATH = "restaurants.services.cloudinary.uploader.destroy"
@@ -151,12 +158,14 @@ class NothingDeletedOnFailureTests(CleanupBase):
     @patch(DESTROY_PATH, return_value={"result": "ok"})
     @patch(UPLOAD_PATH, return_value=UPLOADED)
     def test_db_failure_deletes_new_upload_and_keeps_old_image(self, _upload, destroy):
-        with patch.object(Restaurant, "save", side_effect=DatabaseError("db down")):
-            with self.captureOnCommitCallbacks(execute=True):
-                with self.assertRaises(DatabaseError):
-                    services.update_restaurant_with_image(
-                        self.store, self.owner, valid_data(), image_file()
-                    )
+        with (
+            patch.object(Restaurant, "save", side_effect=DatabaseError("db down")),
+            self.captureOnCommitCallbacks(execute=True),
+            self.assertRaises(DatabaseError),
+        ):
+            services.update_restaurant_with_image(
+                self.store, self.owner, valid_data(), image_file()
+            )
         destroy.assert_called_once()
         self.assertEqual(destroy.call_args.args[0], NEW_ID)  # รูปใหม่ถูกลบ ไม่ใช่รูปเก่า
         fresh = Restaurant.objects.get(pk=self.store.pk)

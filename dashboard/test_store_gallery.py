@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 from cloudinary.exceptions import Error as CloudinaryError
 from django.db import DatabaseError
-from django.urls import reverse
 
 from restaurants import services
 from restaurants.models import MAX_GALLERY_IMAGES, Restaurant, RestaurantImage
@@ -301,13 +300,15 @@ class NothingChangesOnFailureTests(GalleryBase):
     @patch(UPLOAD_PATH, side_effect=fake_uploader())
     def test_db_failure_rolls_back_everything_and_deletes_all_new_uploads(self, _upload, destroy):
         self.add_saved(1, public_id=gallery_id(90))
-        with patch.object(RestaurantImage, "save", side_effect=DatabaseError("db down")):
-            with self.captureOnCommitCallbacks(execute=True):
-                with self.assertRaises(DatabaseError):
-                    services.update_restaurant_with_image(
-                        self.store, self.owner, valid_data(name="Should not save"), image_file(),
-                        gallery_files={1: image_file(), 2: image_file()},
-                    )
+        with (
+            patch.object(RestaurantImage, "save", side_effect=DatabaseError("db down")),
+            self.captureOnCommitCallbacks(execute=True),
+            self.assertRaises(DatabaseError),
+        ):
+            services.update_restaurant_with_image(
+                self.store, self.owner, valid_data(name="Should not save"), image_file(),
+                gallery_files={1: image_file(), 2: image_file()},
+            )
         deleted = {call.args[0] for call in destroy.call_args_list}
         self.assertEqual(deleted, {gallery_id(1), gallery_id(2), gallery_id(3)})  # ไม่รวมรูปเดิม
         self.assert_store_untouched()  # ชื่อร้านที่แก้ก่อนหน้านี้ใน transaction ถูก rollback ด้วย

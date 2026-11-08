@@ -6,6 +6,7 @@ Two entry points share one view:
 Cloudinary is always mocked: these tests never touch the network.
 """
 
+from typing import ClassVar
 from unittest.mock import patch
 
 from cloudinary.exceptions import Error as CloudinaryError
@@ -55,7 +56,7 @@ class StoreDetailsSaveBase(TestCase):
 
 
 class SaveFieldsTests(StoreDetailsSaveBase):
-    NEW_FIELDS = {
+    NEW_FIELDS: ClassVar[dict[str, str]] = {
         "name": "Baan Suan Riverside",
         "category": "Wellness",
         "price": "$$$ · Premium",
