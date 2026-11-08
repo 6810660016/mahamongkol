@@ -15,7 +15,13 @@ from bookings.models import Booking
 from dashboard import stats
 from restaurants import services
 from restaurants.forms import MAX_EXTRAS, PRICE_CHOICES, RestaurantForm
-from restaurants.models import MAX_GALLERY_IMAGES, Restaurant
+from restaurants.models import (
+    MAX_BOOKING_SLOTS,
+    MAX_GALLERY_IMAGES,
+    MAX_SEATS_PER_TABLE,
+    MAX_TABLES_PER_SLOT,
+    Restaurant,
+)
 
 
 @customer_ui_required
@@ -170,7 +176,46 @@ def _gallery_removals(request):
     return slots
 
 
-def _render_store_details(request, restaurant, *, values=None, errors=None, extras=None):
+def _slot_rows(restaurant):
+    """แถวรอบเวลาจองสำหรับตาราง Time: ของจริงจาก DB ถ้าร้านตั้งไว้แล้ว
+    ไม่เช่นนั้นแสดงรอบเริ่มต้นของระบบ (ยังไม่ถูกบันทึกจนกว่าจะกด Save)"""
+    if restaurant is None:
+        return []
+    saved = list(restaurant.booking_slots.all())
+    if saved:
+        return [
+            {
+                "time": f"{slot.time:%H:%M}",
+                "table_count": slot.table_count,
+                "seats": slot.seats_per_table,
+                "available": slot.is_available,
+            }
+            for slot in saved
+        ]
+    tables = restaurant.tables.count() or 4
+    seats = max((t.capacity for t in restaurant.tables.all()), default=4)
+    return [
+        {"time": value, "table_count": tables, "seats": seats, "available": True}
+        for value in booking_services.SLOTS
+    ]
+
+
+def _posted_slot_rows(request):
+    """แถวที่ผู้ใช้กรอกมา (ใช้วาดหน้าเดิมซ้ำเมื่อบันทึกไม่ผ่าน)"""
+    return [
+        {"time": t, "table_count": c, "seats": n, "available": a != "0"}
+        for t, c, n, a in zip(
+            request.POST.getlist("slot_time"),
+            request.POST.getlist("slot_tables"),
+            request.POST.getlist("slot_seats"),
+            request.POST.getlist("slot_available"),
+        )
+    ]
+
+
+def _render_store_details(
+    request, restaurant, *, values=None, errors=None, extras=None, slot_rows=None
+):
     return render(
         request,
         "dashboard/owner_store_details.html",
@@ -181,6 +226,11 @@ def _render_store_details(request, restaurant, *, values=None, errors=None, extr
             "extras": _store_extras(restaurant) if extras is None else extras,
             "max_extras": MAX_EXTRAS,
             "gallery_slots": _gallery_slots(restaurant, errors),
+            "slot_rows": _slot_rows(restaurant) if slot_rows is None else slot_rows,
+            "slots_custom": bool(restaurant and booking_services.uses_custom_slots(restaurant)),
+            "max_slots": MAX_BOOKING_SLOTS,
+            "max_tables": MAX_TABLES_PER_SLOT,
+            "max_seats": MAX_SEATS_PER_TABLE,
             "category_choices": Restaurant.Category.choices,
             "price_choices": PRICE_CHOICES,
             "service_mode_choices": Restaurant.ServiceMode.choices,
@@ -242,6 +292,20 @@ def _save_store_details(request, restaurant):
         else:
             gallery_files[slot] = file
 
+    # รอบเวลาจอง: ส่งมาเมื่อมี slots_present เท่านั้น (ฟอร์มเก่าที่ไม่มีส่วนนี้จะไม่แตะรอบเวลา)
+    slots_present = "slots_present" in request.POST
+    slot_rows = None
+    if slots_present:
+        try:
+            slot_rows = services.parse_booking_slots(
+                request.POST.getlist("slot_time"),
+                request.POST.getlist("slot_tables"),
+                request.POST.getlist("slot_seats"),
+                request.POST.getlist("slot_available"),
+            )
+        except services.RestaurantError as exc:
+            errors["booking_slots"] = [str(exc)]
+
     if not form_valid or errors:
         message = "ยังไม่ได้บันทึก กรุณาตรวจสอบช่องที่มีข้อความแจ้งเตือน"
         if wants_json:
@@ -253,7 +317,12 @@ def _save_store_details(request, restaurant):
         # ฟอร์มที่ไม่มีส่วน Extra details (ไม่มี extras_present) ให้วาดแถวเดิมจาก DB
         extras = _posted_extras(request) if extras_present else None
         return _render_store_details(
-            request, restaurant, values=values, errors=errors, extras=extras
+            request,
+            restaurant,
+            values=values,
+            errors=errors,
+            extras=extras,
+            slot_rows=_posted_slot_rows(request) if slots_present else None,
         )
 
     data = dict(form.cleaned_data)
@@ -273,6 +342,8 @@ def _save_store_details(request, restaurant):
             gallery_files=gallery_files,
             gallery_removals=_gallery_removals(request),
         )
+        if slots_present:
+            services.replace_booking_slots(restaurant, request.user, slot_rows)
     except services.RestaurantError as exc:
         if wants_json:
             # ชี้ช่องรูปหลักเฉพาะเมื่ออัปโหลดแค่รูปเดียว (ถ้าอัปโหลดหลายรูปจะบอกไม่ได้ว่ารูปไหนพัง)
@@ -295,6 +366,7 @@ def _save_store_details(request, restaurant):
                 "image_url": restaurant.image,
                 "extras": _store_extras(restaurant),
                 "no_show_grace_minutes": restaurant.no_show_grace_minutes,
+                "booking_slots": _slot_rows(restaurant) if slots_present else None,
                 "gallery": [
                     {"slot": g["slot"], "url": g["url"]} for g in _gallery_slots(restaurant)
                 ],

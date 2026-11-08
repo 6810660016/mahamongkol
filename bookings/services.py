@@ -13,6 +13,8 @@ from .models import Booking
 SLOTS = ("11:30", "13:00", "17:30", "19:00", "20:30")
 MAX_GUESTS = 12
 INVALID_INPUT_MESSAGE = "Please choose a valid date, time and party size."
+PAST_TIME_MESSAGE = "That time has already passed. Please choose a later time."
+FULL_MESSAGE = "This time is fully booked (เต็ม). Please choose another time."
 DEFAULT_ADVANCE_MONTHS = 1
 
 
@@ -68,14 +70,122 @@ def booked_table_ids(restaurant, day, slot):
     )
 
 
+def uses_custom_slots(restaurant):
+    """True once the owner has set up their own time slots (otherwise the default slots apply)."""
+    return restaurant.booking_slots.exists()
+
+
+def is_past_slot(day, slot_time, now=None):
+    """Whether this date and time has already started, in the project time zone."""
+    local = timezone.localtime(now or timezone.now())
+    if day != local.date():
+        return day < local.date()
+    return slot_time <= local.time().replace(second=0, microsecond=0)
+
+
+def slot_options(restaurant, day, guests=None, now=None):
+    """Every time the customer could pick on `day`, with how many tables are left.
+
+    `state` is open, full, past (already started) or too_large (the party does not fit
+    one table at that time). Used for both the booking page and its JSON endpoint.
+    """
+    if uses_custom_slots(restaurant):
+        slots = [
+            (slot.time, slot.table_count, slot.seats_per_table)
+            for slot in restaurant.booking_slots.filter(is_available=True)
+        ]
+    else:
+        tables = list(restaurant.tables.all())
+        slots = [(parse_slot(value), None, None) for value in SLOTS]
+
+    options = []
+    for slot_time, table_count, seats in slots:
+        booked = booked_table_ids(restaurant, day, slot_time)
+        if table_count is not None:
+            remaining = max(0, table_count - len(booked))
+            too_large = bool(guests) and guests > seats
+        else:
+            free = [t for t in tables if t.id not in booked]
+            remaining = len(free)
+            too_large = bool(guests) and not any(t.capacity >= guests for t in free) and remaining > 0
+        if is_past_slot(day, slot_time, now):
+            state = "past"
+        elif remaining == 0:
+            state = "full"
+        elif too_large:
+            state = "too_large"
+        else:
+            state = "open"
+        options.append(
+            {
+                "value": f"{slot_time:%H:%M}",
+                "seats": seats,
+                "remaining": remaining,
+                "state": state,
+            }
+        )
+    return options
+
+
+def _next_table(restaurant, seats):
+    """Add a table for slot bookings when the restaurant has fewer tables than a slot needs."""
+    number = restaurant.tables.count() + 1
+    while restaurant.tables.filter(name=f"T{number}").exists():
+        number += 1
+    return restaurant.tables.create(name=f"T{number}", capacity=seats)
+
+
+def _create_slot_booking(user, restaurant, day, slot_value, guests):
+    """Book one of the owner's configured time slots: N tables of S seats each."""
+    try:
+        slot_time = time.fromisoformat(slot_value)
+    except (TypeError, ValueError):
+        raise BookingError(INVALID_INPUT_MESSAGE) from None
+    try:
+        with transaction.atomic():
+            # Locking the slot row makes simultaneous bookings count one at a time.
+            slot = (
+                restaurant.booking_slots.select_for_update()
+                .filter(time=slot_time, is_available=True)
+                .first()
+            )
+            if slot is None or not 1 <= guests <= MAX_GUESTS:
+                raise BookingError(INVALID_INPUT_MESSAGE)
+            if is_past_slot(day, slot.time):
+                raise BookingError(PAST_TIME_MESSAGE)
+            if guests > slot.seats_per_table:
+                raise BookingError(
+                    f"Tables at this time seat up to {slot.seats_per_table} guests."
+                )
+            booked = booked_table_ids(restaurant, day, slot.time)
+            if len(booked) >= slot.table_count:
+                raise BookingError(FULL_MESSAGE)
+            table = (
+                restaurant.tables.exclude(id__in=booked).order_by("name").first()
+                or _next_table(restaurant, slot.seats_per_table)
+            )
+            return Booking.objects.create(
+                user=user, table=table, date=day, time=slot.time, guests=guests
+            )
+    except IntegrityError:
+        raise BookingError("That table was just taken. Please try again.") from None
+
+
 def create_booking(user, restaurant, day, slot_value, guests):
-    """Reserve the smallest free table that fits the party."""
+    """Reserve a table: the owner's time slots when set up, else the smallest free table."""
     if restaurant.status != Restaurant.Status.PUBLISHED or not restaurant.is_open:
         raise BookingError("ร้านนี้ปิดรับจองชั่วคราว")
     if not restaurant.accepts_bookings:
         raise BookingError("This restaurant does not take table bookings. Join the queue instead.")
 
-    slot = parse_slot(slot_value)
+    custom = uses_custom_slots(restaurant)
+    if custom:
+        try:
+            slot = time.fromisoformat(slot_value)
+        except (TypeError, ValueError):
+            slot = None
+    else:
+        slot = parse_slot(slot_value)
     earliest, latest = booking_window()
     if slot is None or day < earliest or not 1 <= guests <= MAX_GUESTS:
         raise BookingError(INVALID_INPUT_MESSAGE)
@@ -86,6 +196,10 @@ def create_booking(user, restaurant, day, slot_value, guests):
             f"({months} month{'s' if months != 1 else ''} ahead). "
             "Please choose an earlier date."
         )
+    if custom:
+        return _create_slot_booking(user, restaurant, day, slot_value, guests)
+    if is_past_slot(day, slot):
+        raise BookingError(PAST_TIME_MESSAGE)
 
     for _ in range(3):
         table = (

@@ -2,6 +2,7 @@ from datetime import date
 from urllib.parse import urlencode
 
 from django.core.exceptions import PermissionDenied
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -38,17 +39,42 @@ def booking_view(request, slug):
             else:
                 return redirect("my_queues")
     min_date, max_date = services.booking_window()
+    try:
+        shown_day = date.fromisoformat(request.POST.get("date", ""))
+    except ValueError:
+        shown_day = min_date
     return render(
         request,
         "bookings/booking.html",
         {
             "restaurant": restaurant,
             "error": error,
-            "slots": services.SLOTS,
+            "slot_options": services.slot_options(restaurant, shown_day),
+            "selected_time": request.POST.get("time", ""),
             "min_date": min_date,
             "max_date": max_date,
         },
     )
+
+
+@customer_ui_required
+def booking_slots_view(request, slug):
+    """JSON: the times of one day with how many tables are left (full / past are flagged)."""
+    restaurant = get_object_or_404(Restaurant.objects.published(), slug=slug)
+    if not restaurant.accepts_bookings:
+        return JsonResponse({"error": "This restaurant does not take table bookings."}, status=404)
+    try:
+        day = date.fromisoformat(request.GET.get("date", ""))
+    except ValueError:
+        return JsonResponse({"error": services.INVALID_INPUT_MESSAGE}, status=400)
+    earliest, latest = services.booking_window()
+    if not earliest <= day <= latest:
+        return JsonResponse({"error": services.INVALID_INPUT_MESSAGE}, status=400)
+    try:
+        guests = int(request.GET.get("guests", "")) or None
+    except ValueError:
+        guests = None
+    return JsonResponse({"slots": services.slot_options(restaurant, day, guests)})
 
 
 QUEUE_TABS = {

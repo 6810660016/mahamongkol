@@ -138,12 +138,55 @@
   // หลังบันทึกสำเร็จ: วาดแถวใหม่ตามที่เซิร์ฟเวอร์บันทึกจริง (แถวที่กรอกไม่ครบจะถูกตัดออก)
   const renderExtras = (items) => { if (!extraList) return; extraList.replaceChildren(); items.forEach((item) => addExtraRow(item.key, item.value)); syncExtraButton(); };
 
-  form.querySelector("[data-add-slot]").addEventListener("click", () => {
+  // รอบเวลาจอง: แถวเวลา / จำนวนโต๊ะ / คนต่อโต๊ะ / เปิดให้จอง (เซิร์ฟเวอร์ตรวจและจำกัดจำนวนซ้ำเสมอ)
+  // ช่องติ๊ก Available ไม่มี name จึงใช้ input hidden slot_available (1/0) ส่งค่าไปแทน
+  const addSlotButton = form.querySelector("[data-add-slot]");
+  const slotInput = (name, type, label, value, attrs) => {
+    const input = document.createElement("input");
+    input.name = name; input.type = type; input.required = true; input.value = value; input.setAttribute("aria-label", label);
+    Object.entries(attrs || {}).forEach(([key, val]) => input.setAttribute(key, val));
+    return input;
+  };
+  function addSlotRow(slot) {
     const row = document.createElement("tr");
-    row.innerHTML = '<td><input type="checkbox" checked aria-label="Slot available"></td><td><input type="time" value="14:00" aria-label="Slot time"></td><td><input type="number" value="4" min="1" max="100" aria-label="Tables"></td><td><button type="button" data-remove-slot aria-label="Remove slot">×</button></td>';
+    row.setAttribute("data-slot-row", "");
+    const cells = [document.createElement("td"), document.createElement("td"), document.createElement("td"), document.createElement("td"), document.createElement("td")];
+    const toggle = document.createElement("input");
+    toggle.type = "checkbox"; toggle.checked = slot.available !== false; toggle.setAttribute("data-slot-toggle", ""); toggle.setAttribute("aria-label", "Slot available");
+    const flag = document.createElement("input");
+    flag.type = "hidden"; flag.name = "slot_available"; flag.value = toggle.checked ? "1" : "0";
+    cells[0].append(toggle, flag);
+    cells[1].append(slotInput("slot_time", "time", "Slot time", slot.time || "18:00"));
+    cells[2].append(slotInput("slot_tables", "number", "Number of tables", slot.table_count || 4, { min: 1, max: addSlotButton.dataset.maxTables }));
+    cells[3].append(slotInput("slot_seats", "number", "Guests per table", slot.seats || 4, { min: 1, max: addSlotButton.dataset.maxSeats }));
+    const remove = document.createElement("button");
+    remove.type = "button"; remove.textContent = "×"; remove.setAttribute("data-remove-slot", ""); remove.setAttribute("aria-label", "Remove slot");
+    cells[4].append(remove);
+    row.append(...cells);
     list.append(row);
+    return row;
+  }
+  const maxSlots = parseInt(addSlotButton.dataset.max, 10) || 20;
+  const syncSlotButton = () => { if (!addSlotButton.hasAttribute("data-no-store")) addSlotButton.disabled = list.children.length >= maxSlots || addSlotDisabledAtStart; };
+  const addSlotDisabledAtStart = addSlotButton.disabled;
+  addSlotButton.addEventListener("click", () => { if (list.children.length < maxSlots) addSlotRow({}).querySelector("input[name=slot_time]").focus(); syncSlotButton(); });
+  list.addEventListener("click", (event) => { const button = event.target.closest("[data-remove-slot]"); if (button) { button.closest("tr").remove(); syncSlotButton(); } });
+  list.addEventListener("change", (event) => {
+    const toggle = event.target.closest("[data-slot-toggle]");
+    if (toggle) toggle.closest("tr").querySelector("input[name=slot_available]").value = toggle.checked ? "1" : "0";
   });
-  list.addEventListener("click", (event) => { const button = event.target.closest("[data-remove-slot]"); if (button) button.closest("tr").remove(); });
+  const renderSlots = (items) => { list.replaceChildren(); items.forEach(addSlotRow); syncSlotButton(); };
+  syncSlotButton();
+
+  // ก่อนบันทึกจริงถามยืนยันอีกครั้งด้วย dialog (ไม่มี <dialog> ในเบราว์เซอร์เก่าใช้ confirm() แทน)
+  const confirmDialog = document.querySelector("[data-confirm-dialog]");
+  const confirmSave = () => new Promise((resolve) => {
+    if (!confirmDialog || typeof confirmDialog.showModal !== "function") { resolve(window.confirm("ยืนยันว่าจะเปลี่ยนแปลงข้อมูลร้านและรอบเวลาจองใช่ไหม?")); return; }
+    const done = () => { confirmDialog.removeEventListener("close", done); resolve(confirmDialog.returnValue === "ok"); };
+    confirmDialog.addEventListener("close", done);
+    confirmDialog.returnValue = "cancel";
+    confirmDialog.showModal();
+  });
 
   // Save: ส่งทั้งฟอร์ม (ข้อมูลร้าน + ไฟล์รูป) ด้วย fetch ใน request เดียว
   // ถ้าไม่ผ่านหน้าไม่ reload ไฟล์รูปที่เลือกไว้และค่าที่กรอกจึงไม่หาย
@@ -165,6 +208,7 @@
     event.preventDefault();
     if (saving) return;
     if (!form.reportValidity()) return;
+    if (!(await confirmSave())) return;
     clearErrors();
     setSaving(true);
     try {
@@ -180,6 +224,7 @@
       if (response.ok && payload && payload.ok) {
         if (profile) profile.commit(payload.image_url);
         if (Array.isArray(payload.extras)) renderExtras(payload.extras);
+        if (Array.isArray(payload.booking_slots)) renderSlots(payload.booking_slots);
         if (Array.isArray(payload.gallery)) payload.gallery.forEach((item) => { if (gallery[item.slot]) gallery[item.slot].commit(item.url); });
         const chip = document.querySelector("[data-store-name-chip]");
         if (chip && payload.name) chip.textContent = payload.name;

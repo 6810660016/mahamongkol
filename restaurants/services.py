@@ -1,4 +1,5 @@
 import logging
+from datetime import time
 from functools import partial
 
 import cloudinary.uploader
@@ -7,7 +8,16 @@ from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.utils.text import slugify
 
-from .models import MAX_GALLERY_IMAGES, Restaurant, RestaurantImage, Table
+from .models import (
+    MAX_BOOKING_SLOTS,
+    MAX_GALLERY_IMAGES,
+    MAX_SEATS_PER_TABLE,
+    MAX_TABLES_PER_SLOT,
+    BookingSlot,
+    Restaurant,
+    RestaurantImage,
+    Table,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -200,6 +210,67 @@ def update_restaurant_with_image(
                 delete_cloudinary_image(public_id)
         raise
     return restaurant
+
+
+def parse_booking_slots(times, table_counts, seats, available):
+    """ตรวจรอบเวลาจองที่ส่งมาจากหน้า Store Details แล้วคืน list ของ dict พร้อมบันทึก
+
+    แต่ละรอบ: เวลา (HH:MM ไม่ซ้ำกัน), จำนวนโต๊ะ (1..MAX_TABLES_PER_SLOT),
+    ที่นั่งต่อโต๊ะ (1..MAX_SEATS_PER_TABLE), เปิดให้จองหรือไม่ แถวที่ว่างทั้งแถวถูกข้าม
+    ถ้าไม่ผ่านจะ raise RestaurantError พร้อมข้อความระบุแถว
+    """
+    rows, seen = [], set()
+    for index, raw in enumerate(zip(times, table_counts, seats, available), start=1):
+        raw_time, raw_tables, raw_seats, raw_available = (str(v).strip() for v in raw)
+        if not (raw_time or raw_tables or raw_seats):
+            continue
+        try:
+            slot_time = time.fromisoformat(raw_time)
+        except ValueError:
+            raise RestaurantError(f"รอบที่ {index}: กรุณาเลือกเวลาให้ถูกต้อง") from None
+        slot_time = slot_time.replace(second=0, microsecond=0)
+        if slot_time in seen:
+            raise RestaurantError(f"รอบที่ {index}: เวลา {slot_time:%H:%M} ซ้ำกับรอบอื่น")
+        seen.add(slot_time)
+        if not (raw_tables.isdigit() and 1 <= int(raw_tables) <= MAX_TABLES_PER_SLOT):
+            raise RestaurantError(
+                f"รอบที่ {index}: จำนวนโต๊ะต้องเป็น 1–{MAX_TABLES_PER_SLOT}"
+            )
+        if not (raw_seats.isdigit() and 1 <= int(raw_seats) <= MAX_SEATS_PER_TABLE):
+            raise RestaurantError(
+                f"รอบที่ {index}: จำนวนคนต่อโต๊ะต้องเป็น 1–{MAX_SEATS_PER_TABLE}"
+            )
+        rows.append(
+            {
+                "time": slot_time,
+                "table_count": int(raw_tables),
+                "seats_per_table": int(raw_seats),
+                "is_available": raw_available != "0",
+            }
+        )
+    if len(rows) > MAX_BOOKING_SLOTS:
+        raise RestaurantError(f"ตั้งรอบเวลาได้ไม่เกิน {MAX_BOOKING_SLOTS} รอบ")
+    return rows
+
+
+def replace_booking_slots(restaurant, by_user, rows):
+    """ให้รอบเวลาของร้านตรงกับ rows (จาก parse_booking_slots) ลบรอบที่หายไป แก้รอบเดิม เพิ่มรอบใหม่
+
+    การจองที่ยืนยันแล้วยังอยู่ครบ แม้รอบนั้นถูกลบหรือลดจำนวนโต๊ะ
+    """
+    _require_manage(by_user, restaurant)
+    wanted = {row["time"]: row for row in rows}
+    with transaction.atomic():
+        existing = {slot.time: slot for slot in restaurant.booking_slots.select_for_update()}
+        for slot_time, slot in existing.items():
+            if slot_time not in wanted:
+                slot.delete()
+        for slot_time, row in wanted.items():
+            BookingSlot.objects.update_or_create(
+                restaurant=restaurant,
+                time=slot_time,
+                defaults={k: v for k, v in row.items() if k != "time"},
+            )
 
 
 def set_status(restaurant, by_user, *, status=None, is_open=None):
