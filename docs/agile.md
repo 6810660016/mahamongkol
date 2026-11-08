@@ -56,4 +56,5 @@
 ## Retrospective
 
 - Sprint 1: #38 (Start / Stop / Continue) และ #39 (4Ls)
-- Sprint 2 และ Sprint 3: รอทีมเขียน
+- Sprint 2: #124 (Start / Stop / Continue) และ #125 (4Ls)
+- Sprint 3: #126 (Start / Stop / Continue) และ #127 (4Ls)
