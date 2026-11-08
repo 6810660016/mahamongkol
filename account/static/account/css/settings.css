@@ -46,3 +46,22 @@
 .settings-logout__button:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
 @media (max-width: 900px) { .settings-logout { width: min(100% - 48px, 720px); } }
 @media (max-width: 560px) { .settings-logout { align-items: stretch; flex-direction: column; width: calc(100% - 36px); margin-top: 2px; padding: 20px 17px; }.settings-logout__button { width: 100%; } }
+
+/* Read-only email and not-yet-available settings */
+.settings-fields input[readonly] { border-color: #e8e3d8; color: var(--muted); background: #f4f2ec; cursor: default; }
+.soon-badge { display: inline-block; margin-left: 8px; padding: 3px 9px; border-radius: 999px; color: #8a6a1c; background: #f6ecd0; font-family: inherit; font-size: .58rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; vertical-align: middle; }
+.settings-card.is-soon .preference-row, .settings-card.is-soon .toggle-row { opacity: .45; }
+.settings-card.is-soon .preference-row select:disabled { color: var(--muted); background: #f4f2ec; cursor: not-allowed; }
+.settings-card.is-soon .toggle-row { cursor: not-allowed; }
+.settings-card.is-soon .toggle-row input { cursor: not-allowed; }
+
+/* Save confirmation */
+.settings-confirm { width: min(400px, calc(100% - 36px)); padding: 26px 28px 22px; border: 0; border-radius: 13px; color: var(--ink); background: var(--white); box-shadow: 0 24px 60px rgba(37,31,19,.28); }
+.settings-confirm::backdrop { background: rgba(28,24,15,.45); }
+.settings-confirm h2 { margin: 0 0 8px; font-family: Merriweather, serif; font-size: 1.15rem; }
+.settings-confirm p { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.6; overflow-wrap: anywhere; }
+.settings-confirm p strong { color: var(--ink); }
+.settings-confirm__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.settings-confirm__actions .button { min-height: 42px; padding: 0 20px; border-radius: 999px; font-size: .76rem; }
+.settings-confirm__cancel { min-height: 42px; padding: 0 18px; border: 1px solid #ded8cc; border-radius: 999px; color: #4d4b44; background: transparent; font: inherit; font-size: .76rem; font-weight: 600; cursor: pointer; }
+.settings-confirm__cancel:hover { background: #f4f2ec; }
