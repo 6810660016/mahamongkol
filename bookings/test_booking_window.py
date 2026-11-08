@@ -1,4 +1,6 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from unittest import mock
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -59,6 +61,11 @@ class BookingWindowTests(TestCase):
 @override_settings(BOOKING_MAX_ADVANCE_MONTHS=1)
 class BookingDateRangeTests(TestCase):
     def setUp(self):
+        # Freeze the clock at midday so the evening slots are always still in the future.
+        noon = datetime(2026, 11, 8, 12, 0, tzinfo=ZoneInfo("Asia/Bangkok"))
+        patcher = mock.patch("django.utils.timezone.now", return_value=noon)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.customer = User.objects.create_user("customer", "customer@example.com", "Queue-pass-2026")
         self.client.force_login(self.customer)
         self.salvia = Restaurant.objects.get(slug="salvia")

@@ -2,7 +2,7 @@
 {% load static %}
 {% block title %}Book {{ restaurant.name }} | Mahamongkol{% endblock %}
 {% block page_css %}
-<link rel="stylesheet" href="{% static 'bookings/css/booking.css' %}">
+<link rel="stylesheet" href="{% static 'bookings/css/booking.css' %}?v=20261108-2">
 {% endblock %}
 {% block body_class %}booking-page{% endblock %}
 {% block content %}
@@ -18,7 +18,7 @@
       {% if not restaurant.is_open %}
       <p class="booking-error" role="alert">ร้านนี้ปิดรับจองชั่วคราว</p>
       {% else %}
-      <form method="post" class="booking-form">
+      <form method="post" class="booking-form" data-slots-url="{% url 'booking_slots' restaurant.slug %}" data-shown-day="{{ shown_day|date:'Y-m-d' }}">
         {% csrf_token %}
         <label for="booking-date">Date</label>
         <input id="booking-date" type="date" name="date" required min="{{ min_date|date:'Y-m-d' }}" max="{{ max_date|date:'Y-m-d' }}" value="{{ request.POST.date }}">
@@ -35,19 +35,22 @@
           <div>
             <label for="booking-time">Time</label>
             <select id="booking-time" name="time" required>
-              {% for slot in slots %}
-              <option value="{{ slot }}">{{ slot }}</option>
+              {% for slot in slot_options %}
+              <option value="{{ slot.value }}"{% if slot.state != 'open' %} disabled{% endif %}{% if slot.value == selected_time %} selected{% endif %}>{{ slot.value }}{% if slot.state == 'full' %} · เต็ม{% elif slot.state == 'past' %} · ผ่านไปแล้ว{% endif %}</option>
+              {% empty %}
+              <option value="" disabled selected>No times available</option>
               {% endfor %}
             </select>
           </div>
         </div>
         <div class="booking-slots">
           <span>Available times</span>
-          <div>
-            {% for slot in slots %}
-            <label><input type="radio" name="time-choice" value="{{ slot }}" {% if forloop.first %}checked{% endif %}><span>{{ slot }}</span></label>
+          <div data-slot-buttons>
+            {% for slot in slot_options %}
+            <label class="{% if slot.state != 'open' %}is-unavailable{% endif %}"><input type="radio" name="time-choice" value="{{ slot.value }}"{% if slot.state != 'open' %} disabled{% endif %}><span>{{ slot.value }}{% if slot.state == 'full' %} <small>เต็ม</small>{% elif slot.state == 'past' %} <small>ผ่านไปแล้ว</small>{% endif %}</span></label>
             {% endfor %}
           </div>
+          <p class="booking-form__fineprint" data-slot-note></p>
         </div>
         <button class="button button--primary button--full" type="submit">Confirm reservation <span>→</span></button>
         <p class="booking-form__fineprint">By continuing, you agree to the restaurant’s reservation policy.</p>
@@ -70,5 +73,5 @@
 </main>
 {% endblock %}
 {% block page_js %}
-<script src="{% static 'bookings/js/booking.js' %}"></script>
+<script src="{% static 'bookings/js/booking.js' %}?v=20261108-3"></script>
 {% endblock %}

@@ -1,6 +1,23 @@
 # mahamongkol
 
-ระบบจองคิว (Django)
+ระบบจองโต๊ะและคิวร้านอาหาร (Django) ลูกค้าค้นหาร้าน จองโต๊ะ หรือเข้าคิวเองและดูตำแหน่งคิวสด เจ้าของร้านจัดการร้าน การจอง และคิววันนี้ แอดมินตรวจใบสมัครเจ้าของร้าน
+
+## เอกสาร
+
+- [Architecture (C4 Context/Container/Component) และ ERD](docs/architecture.md)
+- [CI และ test coverage](docs/ci-and-coverage.md)
+- [Agile: Velocity และ Burndown](docs/agile.md)
+
+## โครงสร้างแอป
+
+| แอป | หน้าที่ |
+|---|---|
+| `account` | ผู้ใช้ บทบาท (user/owner/admin) ล็อกอิน รีเซ็ตรหัสผ่านด้วย OTP ใบสมัครเจ้าของร้าน |
+| `restaurants` | ร้านและโต๊ะ ค้นหาร้าน โหมดบริการของร้าน (จอง/คิว/ทั้งสอง) |
+| `bookings` | จองโต๊ะ ยกเลิก จองเสร็จสิ้น no-show อัตโนมัติ ประวัติการจอง |
+| `queues` | คิว walk-in และคิวออนไลน์ เรียกคิว ข้าม เรียกคืน ตำแหน่งคิวสด |
+| `dashboard` | หน้าฝั่ง Owner: ร้าน การจอง คิว |
+
 
 ## Setup
 
@@ -75,7 +92,8 @@ python manage.py createsuperuser
 - การอนุมัติบันทึกผู้อนุมัติและเวลา และเพิ่มสิทธิ์ Owner ให้บัญชีเดิมโดยคงสิทธิ์ Customer ไว้
 - เมื่ออนุมัติแล้วใช้ปุ่ม `Owner Studio` ใน navbar ฝั่งลูกค้า และ `Switch to customer` ในฝั่งร้าน
 - บัญชี Owner เดิมยังคงสิทธิ์ไว้ โดยไม่ต้องสมัครใหม่
-- หน้าจัดการร้าน Owner Studio ยังเป็น **mockup**: ร้านตัวอย่างและการแก้ไขอยู่ในหน่วยความจำของหน้าเว็บ รีเฟรชแล้วรีเซ็ต ส่วนใบสมัครและการอนุมัติบันทึกลงฐานข้อมูลจริง
+- Owner Studio บันทึกร้าน การจอง และคิวลงฐานข้อมูลจริง
+- เจ้าของร้านเลือกโหมดบริการของร้านได้ 3 แบบ: รับจองอย่างเดียว รับคิวอย่างเดียว หรือทั้งสองแบบ (ตั้งตอนเพิ่มหรือแก้ร้าน)
 
 หลังดึงโค้ดให้รัน `python manage.py migrate` เพื่อสร้างตารางใบสมัคร
 
@@ -95,3 +113,15 @@ python -m coverage report --fail-under=80
 ```bash
 python manage.py test
 ```
+
+บน Windows ภาษาไทย ถ้าเจอ `UnicodeDecodeError` ตอนรันเทส ให้ตั้ง `$env:PYTHONUTF8 = "1"` (PowerShell) ก่อนรัน
+
+ลำดับ `python manage.py migrate` ต้องรันหลังดึงโค้ดทุกครั้ง เพราะมี migration ใหม่ของ `restaurants`, `bookings` และ `queues`
+
+## Mark no-show (งานตามเวลา)
+
+```bash
+python manage.py mark_no_shows
+```
+
+ตั้งให้รันเป็นระยะ (เช่น cron) เพื่อเปลี่ยนการจองที่เลยเวลาเกินช่วงผ่อนผันเป็น no-show

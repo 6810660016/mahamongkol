@@ -36,7 +36,7 @@ class OwnerPreviewTests(TestCase):
         self.assertContains(response, "Skipped queues")
 
     def test_new_owner_mockup_pages_are_available_and_marked_as_sample(self):
-        for name, text in (("owner_overview", "Sample dashboard"), ("owner_store_details", "Store details mockup")):
+        for name, text in (("owner_overview", "Service Home"), ("owner_store_details", "not saved yet")):
             with self.subTest(page=name):
                 response = self.client.get(reverse(name))
                 self.assertEqual(response.status_code, 200)
@@ -159,5 +159,5 @@ class OneStorePerOwnerTests(TestCase):
                 response = self.client.get(reverse(name))
                 self.assertNotContains(response, "data-open-store")
                 self.assertNotContains(response, "add_store=1")
-                if name != "owner_dashboard":  # หน้า dashboard ยังมี dialog ที่ใช้แก้ร้านด้วย
+                if name != "owner_dashboard":  # หน้า dashboard ยังมี dialog สร้างร้าน (ซ่อนอยู่ ข้อความ Add a store จึงยังอยู่ใน HTML)
                     self.assertNotContains(response, "Add a store")

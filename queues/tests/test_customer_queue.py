@@ -1,3 +1,7 @@
+from datetime import datetime
+from unittest import mock
+from zoneinfo import ZoneInfo
+
 from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
@@ -183,6 +187,11 @@ class ServiceModeTests(QueueTestBase):
         self.assertEqual(QueueEntry.objects.count(), 1)
 
     def test_booking_only_hides_queue_and_blocks_it(self):
+        # Freeze the clock at midday so the 19:00 slot is always still in the future.
+        noon = datetime(2026, 11, 8, 12, 0, tzinfo=ZoneInfo("Asia/Bangkok"))
+        patcher = mock.patch("django.utils.timezone.now", return_value=noon)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.set_mode("booking")
         self.client.force_login(self.guest)
         page = self.client.get(reverse("restaurant_detail", args=["salvia"]))

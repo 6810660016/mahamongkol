@@ -376,34 +376,32 @@ def switch_ui_view(request):
     return redirect(get_landing_url_name(request))
 
 
+SETTINGS_NAME_MAX_LENGTH = 80
+
+
 @customer_ui_required
 def settings_view(request):
-    settings = request.session.get('site_settings', {
-        'name': 'Guest Member',
-        'email': '',
-        'language': 'English',
-        'currency': 'THB',
-        'time_format': '12-hour',
-        'reservation_updates': True,
-        'reminders': True,
-        'offers': False,
-    })
+    """Edit the signed-in user's display name.
+
+    Email is shown read-only: it is the login key and the password-reset OTP
+    target, so changing it needs its own verified flow. Language, currency,
+    time format and notifications are not wired to anything yet and are
+    rendered disabled ("Coming soon") instead of being stored.
+    """
+    user = request.user
     saved = False
     if request.method == 'POST':
-        language = request.POST.get('language', 'English')
-        currency = request.POST.get('currency', 'THB')
-        time_format = request.POST.get('time_format', '12-hour')
-        settings = {
-            'name': request.POST.get('name', '').strip()[:80] or 'Guest Member',
-            'email': request.POST.get('email', '').strip()[:254],
-            'language': language if language in ('English', 'Thai') else 'English',
-            'currency': currency if currency in ('THB', 'USD') else 'THB',
-            'time_format': time_format if time_format in ('12-hour', '24-hour') else '12-hour',
-            'reservation_updates': request.POST.get('reservation_updates') == 'on',
-            'reminders': request.POST.get('reminders') == 'on',
-            'offers': request.POST.get('offers') == 'on',
-        }
-        request.session['site_settings'] = settings
+        # Collapse whitespace; an empty name falls back to the username.
+        name = ' '.join(request.POST.get('name', '').split())
+        user.first_name = name[:SETTINGS_NAME_MAX_LENGTH]
+        user.save(update_fields=['first_name'])
         saved = True
-    return render(request, 'account/settings.html', {'settings': settings, 'saved': saved})
+    return render(request, 'account/settings.html', {
+        'display_name': user.first_name or user.username,
+        'username': user.get_username(),
+        'name_value': user.first_name,
+        'email': user.email,
+        'name_max_length': SETTINGS_NAME_MAX_LENGTH,
+        'saved': saved,
+    })
 
