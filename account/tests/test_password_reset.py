@@ -1,5 +1,7 @@
 import re
 import time
+from smtplib import SMTPException
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -56,12 +58,40 @@ class PasswordResetTests(TestCase):
         self.assertRedirects(response, self.verify_url)
         self.assertEqual(len(mail.outbox), 0)
 
+    def test_delivery_failure_clears_reset_access_and_allows_retry(self):
+        for error in (SMTPException("SMTP unavailable"), OSError("Connection failed")):
+            with self.subTest(error=type(error).__name__):
+                with patch("account.views.send_mail", side_effect=error):
+                    response = self.request_otp()
+                self.assertContains(response, "ส่งอีเมลไม่สำเร็จ")
+                self.assertNotIn("password_reset_otp_hash", self.client.session)
+                self.assertNotIn("password_reset_email", self.client.session)
+                self.assertRedirects(self.client.get(self.new_password_url), self.request_url)
+
+    def test_resend_delivery_failure_shows_error_without_granting_access(self):
+        self.request_otp()
+        session = self.client.session
+        session["password_reset_otp_sent"] = int(time.time()) - 61
+        session.save()
+        with patch("account.views.send_mail", side_effect=SMTPException("SMTP unavailable")):
+            response = self.client.post(self.verify_url, {"action": "resend"})
+        self.assertContains(response, "ส่งอีเมลไม่สำเร็จ")
+        self.assertNotIn("password_reset_verified_until", self.client.session)
+        self.assertRedirects(self.client.get(self.new_password_url), self.request_url)
+
+    def test_programming_errors_are_not_reported_as_delivery_failures(self):
+        with patch("account.views.send_mail", side_effect=TypeError("Unexpected bug")):
+            with self.assertRaises(TypeError):
+                self.request_otp()
+
     def test_wrong_otp_increments_attempts(self):
         self.request_otp()
+        # Always differ from the generated OTP, including when it is 000000.
+        wrong_otp = f"{(int(self.get_otp_from_email()) + 1) % 1_000_000:06d}"
 
         response = self.client.post(
             self.verify_url,
-            {"otp": "000000"},
+            {"otp": wrong_otp},
         )
 
         self.assertEqual(response.status_code, 200)

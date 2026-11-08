@@ -1,0 +1,12 @@
+[run]
+source = account, bookings, dashboard, queues, restaurants
+omit =
+    */migrations/*
+    */tests/*
+    */tests.py
+    */test_*.py
+
+[report]
+fail_under = 80
+precision = 2
+show_missing = True
