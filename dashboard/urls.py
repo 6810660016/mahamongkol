@@ -14,6 +14,7 @@ urlpatterns = [
         views.owner_store_details_view,
         name="owner_store_details",
     ),
+    path("owner/store-details/slots/", views.owner_slots_view, name="owner_slots"),
     path("owner/bookings/", views.owner_bookings_view, name="owner_bookings"),
     path(
         "owner/bookings/<int:booking_id>/cancel/",

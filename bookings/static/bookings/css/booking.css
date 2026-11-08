@@ -7,3 +7,6 @@
 .booking-summary { overflow: hidden; border: 1px solid #e6dfd1; border-radius: 8px; background: var(--white); box-shadow: 0 16px 44px rgba(33,27,15,.08); }.booking-summary__image { height: 250px; background-position: center; background-size: cover; }.booking-summary__body { padding: 23px 25px 27px; }.booking-summary__body h2 { margin: 0; font-family: Merriweather, serif; font-size: 1.5rem; }.booking-summary__body > p:not(.eyebrow) { color: var(--muted); font-size: .78rem; }.booking-summary__line { height: 1px; margin: 18px 0; background: #ece7dc; }.booking-summary__rating { margin-top: 20px; color: #a77a20; font-size: .8rem; }.booking-summary__rating span { color: var(--muted); }
 @media (max-width: 850px) { .booking-layout { grid-template-columns: 1fr; gap: 25px; width: min(100% - 48px, 620px); }.booking-back { width: min(100% - 48px, 620px); }.booking-summary { grid-row: 1; }.booking-summary__image { height: 210px; } }
 @media (max-width: 560px) { .booking-layout, .booking-back { width: calc(100% - 36px); }.booking-form__row { grid-template-columns: 1fr; } }
+.booking-slots label.is-unavailable { opacity: .55; cursor: not-allowed; }
+.booking-slots label.is-unavailable span { text-decoration: line-through; }
+.booking-slots label span small { font-size: .7rem; font-weight: 700; text-decoration: none; display: inline-block; }

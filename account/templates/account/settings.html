@@ -26,9 +26,11 @@
       {% if saved %}<div class="settings-saved" role="status"><span>✓</span> Your settings have been saved.</div>{% endif %}
       <section class="settings-card" id="profile">
         <div class="settings-card__heading"><div><p class="eyebrow">YOUR ACCOUNT</p><h2>Personal details</h2></div><span class="settings-card__icon">♙</span></div>
-        <div class="profile-summary"><span class="profile-avatar">{{ display_name|slice:":1"|upper }}</span><div><strong>{{ display_name }}</strong><small>Member profile</small></div><span class="profile-summary__tag">ACTIVE</span></div>
+        <div class="profile-summary"><span class="profile-avatar">{{ display_name|slice:":1"|upper }}</span><div class="profile-summary__text"><strong>{{ display_name }}</strong><small class="profile-summary__handle">@{{ username }}</small><small class="profile-summary__role">Member profile</small></div><span class="profile-summary__tag">ACTIVE</span></div>
         <div class="settings-fields">
           <label for="settings-name">Display name</label><input id="settings-name" type="text" name="name" maxlength="{{ name_max_length }}" value="{{ name_value }}" placeholder="{{ user.username }}" autocomplete="name">
+          <label for="settings-username">Username</label><input id="settings-username" type="text" value="{{ username }}" readonly aria-describedby="settings-username-hint">
+          <small class="settings-hint" id="settings-username-hint">Your username is your unique handle, so it can't be changed.</small>
           <label for="settings-email">Email address</label><input id="settings-email" type="email" value="{{ email }}" readonly aria-describedby="settings-email-hint">
           <small class="settings-hint" id="settings-email-hint">Your email is used to sign in and to reset your password, so it can't be changed here. Leave the name empty to use your username.</small>
         </div>

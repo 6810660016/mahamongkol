@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -15,7 +15,13 @@ from bookings.models import Booking
 from dashboard import stats
 from restaurants import services
 from restaurants.forms import MAX_EXTRAS, PRICE_CHOICES, RestaurantForm
-from restaurants.models import MAX_GALLERY_IMAGES, Restaurant
+from restaurants.models import (
+    MAX_BOOKING_SLOTS,
+    MAX_GALLERY_IMAGES,
+    MAX_SEATS_PER_TABLE,
+    MAX_TABLES_PER_SLOT,
+    Restaurant,
+)
 
 
 @customer_ui_required
@@ -170,7 +176,82 @@ def _gallery_removals(request):
     return slots
 
 
-def _render_store_details(request, restaurant, *, values=None, errors=None, extras=None):
+def _slot_rows(restaurant):
+    """แถวรอบเวลาจองสำหรับตาราง Time: ของจริงจาก DB ถ้าร้านตั้งไว้แล้ว
+    ไม่เช่นนั้นแสดงรอบเริ่มต้นของระบบ (ยังไม่ถูกบันทึกจนกว่าจะกด Save)"""
+    if restaurant is None:
+        return []
+    saved = list(restaurant.booking_slots.all())
+    if saved:
+        return [
+            {
+                "time": f"{slot.time:%H:%M}",
+                "table_count": slot.table_count,
+                "seats": slot.seats_per_table,
+                "available": slot.is_available,
+            }
+            for slot in saved
+        ]
+    tables = restaurant.tables.count() or 4
+    seats = max((t.capacity for t in restaurant.tables.all()), default=4)
+    return [
+        {"time": value, "table_count": tables, "seats": seats, "available": True}
+        for value in booking_services.SLOTS
+    ]
+
+
+def _day_slot_rows(restaurant, day):
+    """รอบเวลาของวันที่ระบุสำหรับตาราง Time + จำนวนโต๊ะที่ถูกจองแล้ว และที่มาของรอบ
+    source: date (ตั้งเฉพาะวันนี้) / usual (รอบปกติของร้าน) / default (รอบเริ่มต้นของระบบ)"""
+    custom = booking_services.day_slots(restaurant, day)
+    if custom is None:
+        rows, source = _slot_rows(restaurant), "default"
+    else:
+        rows = [
+            {"time": f"{t:%H:%M}", "table_count": c, "seats": n, "available": a}
+            for t, c, n, a in custom
+        ]
+        source = "date" if restaurant.booking_slot_dates.filter(date=day).exists() else "usual"
+    for row in rows:
+        booked = booking_services.booked_table_ids(restaurant, day, time.fromisoformat(row["time"]))
+        row["booked"] = len(booked)
+    return rows, source
+
+
+def _custom_slot_dates(restaurant):
+    """วันที่ที่ตั้งรอบเฉพาะวันไว้แล้ว (ใช้ทำจุดบนปฏิทิน) เฉพาะวันนี้เป็นต้นไป"""
+    if restaurant is None:
+        return []
+    days = restaurant.booking_slot_dates.filter(date__gte=timezone.localdate())
+    return sorted({d.isoformat() for d in days.values_list("date", flat=True)})
+
+
+def _slots_day(raw):
+    """วันที่จากปฏิทิน: ต้องอยู่ในช่วงที่ลูกค้าจองได้ (วันนี้ ถึง ช่วงจองล่วงหน้าสูงสุด) ไม่งั้นคืน None"""
+    try:
+        day = date.fromisoformat(raw)
+    except (TypeError, ValueError):
+        return None
+    earliest, latest = booking_services.booking_window()
+    return day if earliest <= day <= latest else None
+
+
+def _posted_slot_rows(request):
+    """แถวที่ผู้ใช้กรอกมา (ใช้วาดหน้าเดิมซ้ำเมื่อบันทึกไม่ผ่าน)"""
+    return [
+        {"time": t, "table_count": c, "seats": n, "available": a != "0"}
+        for t, c, n, a in zip(
+            request.POST.getlist("slot_time"),
+            request.POST.getlist("slot_tables"),
+            request.POST.getlist("slot_seats"),
+            request.POST.getlist("slot_available"),
+        )
+    ]
+
+
+def _render_store_details(
+    request, restaurant, *, values=None, errors=None, extras=None, slot_rows=None
+):
     return render(
         request,
         "dashboard/owner_store_details.html",
@@ -181,6 +262,14 @@ def _render_store_details(request, restaurant, *, values=None, errors=None, extr
             "extras": _store_extras(restaurant) if extras is None else extras,
             "max_extras": MAX_EXTRAS,
             "gallery_slots": _gallery_slots(restaurant, errors),
+            "slot_rows": _slot_rows(restaurant) if slot_rows is None else slot_rows,
+            "slots_custom": bool(restaurant and restaurant.booking_slots.exists()),
+            "custom_dates": ",".join(_custom_slot_dates(restaurant)),
+            "slots_min_date": booking_services.booking_window()[0].isoformat(),
+            "slots_max_date": booking_services.booking_window()[1].isoformat(),
+            "max_slots": MAX_BOOKING_SLOTS,
+            "max_tables": MAX_TABLES_PER_SLOT,
+            "max_seats": MAX_SEATS_PER_TABLE,
             "category_choices": Restaurant.Category.choices,
             "price_choices": PRICE_CHOICES,
             "service_mode_choices": Restaurant.ServiceMode.choices,
@@ -242,6 +331,26 @@ def _save_store_details(request, restaurant):
         else:
             gallery_files[slot] = file
 
+    # รอบเวลาจอง: ส่งมาเมื่อมี slots_present เท่านั้น (ฟอร์มเก่าที่ไม่มีส่วนนี้จะไม่แตะรอบเวลา)
+    slots_present = "slots_present" in request.POST
+    slot_rows = None
+    slots_day = None
+    if slots_present:
+        raw_day = request.POST.get("slots_date", "").strip()
+        if raw_day:
+            slots_day = _slots_day(raw_day)
+            if slots_day is None:
+                errors["booking_slots"] = ["วันที่เลือกอยู่นอกช่วงที่ลูกค้าจองได้"]
+        try:
+            slot_rows = services.parse_booking_slots(
+                request.POST.getlist("slot_time"),
+                request.POST.getlist("slot_tables"),
+                request.POST.getlist("slot_seats"),
+                request.POST.getlist("slot_available"),
+            )
+        except services.RestaurantError as exc:
+            errors["booking_slots"] = [str(exc)]
+
     if not form_valid or errors:
         message = "ยังไม่ได้บันทึก กรุณาตรวจสอบช่องที่มีข้อความแจ้งเตือน"
         if wants_json:
@@ -253,7 +362,12 @@ def _save_store_details(request, restaurant):
         # ฟอร์มที่ไม่มีส่วน Extra details (ไม่มี extras_present) ให้วาดแถวเดิมจาก DB
         extras = _posted_extras(request) if extras_present else None
         return _render_store_details(
-            request, restaurant, values=values, errors=errors, extras=extras
+            request,
+            restaurant,
+            values=values,
+            errors=errors,
+            extras=extras,
+            slot_rows=_posted_slot_rows(request) if slots_present else None,
         )
 
     data = dict(form.cleaned_data)
@@ -273,6 +387,10 @@ def _save_store_details(request, restaurant):
             gallery_files=gallery_files,
             gallery_removals=_gallery_removals(request),
         )
+        if slots_present and slots_day is not None:
+            services.replace_date_slots(restaurant, request.user, slots_day, slot_rows)
+        elif slots_present:
+            services.replace_booking_slots(restaurant, request.user, slot_rows)
     except services.RestaurantError as exc:
         if wants_json:
             # ชี้ช่องรูปหลักเฉพาะเมื่ออัปโหลดแค่รูปเดียว (ถ้าอัปโหลดหลายรูปจะบอกไม่ได้ว่ารูปไหนพัง)
@@ -295,6 +413,12 @@ def _save_store_details(request, restaurant):
                 "image_url": restaurant.image,
                 "extras": _store_extras(restaurant),
                 "no_show_grace_minutes": restaurant.no_show_grace_minutes,
+                "booking_slots": (
+                    (_day_slot_rows(restaurant, slots_day)[0] if slots_day else _slot_rows(restaurant))
+                    if slots_present
+                    else None
+                ),
+                "custom_dates": _custom_slot_dates(restaurant),
                 "gallery": [
                     {"slot": g["slot"], "url": g["url"]} for g in _gallery_slots(restaurant)
                 ],
@@ -413,6 +537,19 @@ def owner_queue_view(request):
     """Queue management page; the live data comes from the queues JSON endpoints."""
     restaurant = Restaurant.objects.filter(owner=request.user).first()
     return render(request, "dashboard/owner_queue.html", {"restaurant": restaurant})
+
+
+@owner_ui_required
+def owner_slots_view(request):
+    """JSON: รอบเวลาของวันที่เลือกจากปฏิทินบนหน้า Store Details (?date=YYYY-MM-DD)"""
+    restaurant = Restaurant.objects.filter(owner=request.user).first()
+    if restaurant is None:
+        return JsonResponse({"error": "no store"}, status=404)
+    day = _slots_day(request.GET.get("date", ""))
+    if day is None:
+        return JsonResponse({"error": "วันที่อยู่นอกช่วงที่ลูกค้าจองได้"}, status=400)
+    rows, source = _day_slot_rows(restaurant, day)
+    return JsonResponse({"date": day.isoformat(), "source": source, "rows": rows})
 
 
 def _form_error_message(form):
