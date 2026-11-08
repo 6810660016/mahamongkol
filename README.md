@@ -6,6 +6,7 @@
 
 - [Architecture (C4 Context/Container/Component) และ ERD](docs/architecture.md)
 - [CI และ test coverage](docs/ci-and-coverage.md)
+- [Agile: Velocity และ Burndown](docs/agile.md)
 
 ## โครงสร้างแอป
 
