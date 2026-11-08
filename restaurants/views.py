@@ -1,4 +1,6 @@
-from django.db.models import Q
+from decimal import Decimal
+
+from django.db.models import Avg, Count, Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
@@ -50,6 +52,11 @@ def restaurant_review_view(request, slug):
         user=request.user,
         defaults={"rating": rating, "message": message},
     )
+    # Keep the rating and review count shown to customers in sync with real reviews.
+    totals = restaurant.review_set.aggregate(avg=Avg("rating"), n=Count("id"))
+    restaurant.rating = round(Decimal(totals["avg"]), 1)
+    restaurant.reviews = totals["n"]
+    restaurant.save(update_fields=["rating", "reviews"])
     return JsonResponse(
         {"rating": review.rating, "message": review.message, "created": created}
     )

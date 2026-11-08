@@ -118,6 +118,19 @@ class ReviewEndpointTests(TestCase):
         review = Review.objects.get()
         self.assertEqual((review.rating, review.message), (2, ""))
 
+    def test_post_updates_displayed_rating_and_count(self):
+        self.store.rating, self.store.reviews = 4.8, 120
+        self.store.save()
+        other = make_user("rv-other")
+        self.client.post(self.url, {"rating": "5"})
+        self.client.force_login(other)
+        self.client.post(self.url, {"rating": "2"})
+        self.store.refresh_from_db()
+        self.assertEqual((float(self.store.rating), self.store.reviews), (3.5, 2))
+        self.client.post(self.url, {"rating": "3"})
+        self.store.refresh_from_db()
+        self.assertEqual((float(self.store.rating), self.store.reviews), (4.0, 2))
+
     def test_invalid_rating_is_rejected(self):
         for value in ("", "0", "6", "x"):
             with self.subTest(value=value):
