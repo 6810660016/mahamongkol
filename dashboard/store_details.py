@@ -1,0 +1,322 @@
+"""ส่วนช่วยของหน้า Store Details: เตรียมข้อมูลสำหรับวาดหน้า และบันทึกเมื่อกด Save"""
+
+from datetime import date, time
+
+from django.contrib import messages
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
+from django.utils import timezone
+
+from bookings import services as booking_services
+from restaurants import services
+from restaurants.forms import MAX_EXTRAS, PRICE_CHOICES, RestaurantForm
+from restaurants.models import (
+    MAX_BOOKING_SLOTS,
+    MAX_GALLERY_IMAGES,
+    MAX_SEATS_PER_TABLE,
+    MAX_TABLES_PER_SLOT,
+    Restaurant,
+)
+
+# ช่องข้อความ/ตัวเลือกบนหน้า Store Details (ชื่อ = name ของ input และชื่อ field ของ RestaurantForm)
+STORE_DETAIL_FIELDS = (
+    "name", "category", "price", "service_mode", "address",
+    "phone", "hours", "map_url", "description", "no_show_grace_minutes",
+)
+
+
+def _wants_json(request):
+    """fetch จาก owner_store_details.js ส่ง header นี้มา ฟอร์มปกติ (ไม่มี JS) จะไม่มี"""
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def _store_values(restaurant):
+    if restaurant is None:
+        return {}
+    return {field: getattr(restaurant, field) for field in STORE_DETAIL_FIELDS}
+
+
+def _store_extras(restaurant):
+    """Extra details ที่บันทึกไว้ (list ของ {key, value}) สำหรับวาดแถวในหน้า"""
+    if restaurant is None:
+        return []
+    return list(restaurant.extra_details or [])
+
+
+def _posted_extras(request):
+    """แถว Extra details ตามที่ผู้ใช้พิมพ์ (ใช้วาดหน้าใหม่ตอนบันทึกไม่ผ่าน จึงเก็บแถวที่กรอกไม่ครบไว้ด้วย)"""
+    keys = request.POST.getlist("extra_key")
+    values = request.POST.getlist("extra_value")
+    return [
+        {"key": k, "value": v}
+        for k, v in zip(keys, values)
+        if k.strip() or v.strip()
+    ][:MAX_EXTRAS]
+
+
+def _gallery_slots(restaurant, errors=None):
+    """ช่อง Pictures ทั้งหมด (1..MAX_GALLERY_IMAGES) พร้อมรูปที่บันทึกไว้ (ว่าง = "")
+    และข้อความ error ของช่อง (ถ้ามี) ใช้วาดหน้าและตอบ JSON หลังบันทึก"""
+    saved = {}
+    if restaurant is not None:
+        saved = {image.slot: image.image for image in restaurant.gallery_images.all()}
+    errors = errors or {}
+    return [
+        {
+            "slot": slot,
+            "url": saved.get(slot, ""),
+            "error": " ".join(errors.get(f"gallery_file_{slot}", [])),
+        }
+        for slot in range(1, MAX_GALLERY_IMAGES + 1)
+    ]
+
+
+def _gallery_removals(request):
+    """ช่องที่เจ้าของติ๊ก Remove (ค่าที่ไม่ใช่เลขช่องที่ถูกต้องจะถูกข้าม)"""
+    slots = set()
+    for raw in request.POST.getlist("gallery_remove"):
+        if raw.isdigit() and 1 <= int(raw) <= MAX_GALLERY_IMAGES:
+            slots.add(int(raw))
+    return slots
+
+
+def _slot_rows(restaurant):
+    """แถวรอบเวลาจองสำหรับตาราง Time: ของจริงจาก DB ถ้าร้านตั้งไว้แล้ว
+    ไม่เช่นนั้นแสดงรอบเริ่มต้นของระบบ (ยังไม่ถูกบันทึกจนกว่าจะกด Save)"""
+    if restaurant is None:
+        return []
+    saved = list(restaurant.booking_slots.all())
+    if saved:
+        return [
+            {
+                "time": f"{slot.time:%H:%M}",
+                "table_count": slot.table_count,
+                "seats": slot.seats_per_table,
+                "available": slot.is_available,
+            }
+            for slot in saved
+        ]
+    tables = restaurant.tables.count() or 4
+    seats = max((t.capacity for t in restaurant.tables.all()), default=4)
+    return [
+        {"time": value, "table_count": tables, "seats": seats, "available": True}
+        for value in booking_services.SLOTS
+    ]
+
+
+def day_slot_rows(restaurant, day):
+    """รอบเวลาของวันที่ระบุสำหรับตาราง Time + จำนวนโต๊ะที่ถูกจองแล้ว และที่มาของรอบ
+    source: date (ตั้งเฉพาะวันนี้) / usual (รอบปกติของร้าน) / default (รอบเริ่มต้นของระบบ)"""
+    custom = booking_services.day_slots(restaurant, day)
+    if custom is None:
+        rows, source = _slot_rows(restaurant), "default"
+    else:
+        rows = [
+            {"time": f"{t:%H:%M}", "table_count": c, "seats": n, "available": a}
+            for t, c, n, a in custom
+        ]
+        source = "date" if restaurant.booking_slot_dates.filter(date=day).exists() else "usual"
+    for row in rows:
+        booked = booking_services.booked_table_ids(restaurant, day, time.fromisoformat(row["time"]))
+        row["booked"] = len(booked)
+    return rows, source
+
+
+def _custom_slot_dates(restaurant):
+    """วันที่ที่ตั้งรอบเฉพาะวันไว้แล้ว (ใช้ทำจุดบนปฏิทิน) เฉพาะวันนี้เป็นต้นไป"""
+    if restaurant is None:
+        return []
+    days = restaurant.booking_slot_dates.filter(date__gte=timezone.localdate())
+    return sorted({d.isoformat() for d in days.values_list("date", flat=True)})
+
+
+def parse_slots_day(raw):
+    """วันที่จากปฏิทิน: ต้องอยู่ในช่วงที่ลูกค้าจองได้ (วันนี้ ถึง ช่วงจองล่วงหน้าสูงสุด) ไม่งั้นคืน None"""
+    try:
+        day = date.fromisoformat(raw)
+    except (TypeError, ValueError):
+        return None
+    earliest, latest = booking_services.booking_window()
+    return day if earliest <= day <= latest else None
+
+
+def _posted_slot_rows(request):
+    """แถวที่ผู้ใช้กรอกมา (ใช้วาดหน้าเดิมซ้ำเมื่อบันทึกไม่ผ่าน)"""
+    return [
+        {"time": t, "table_count": c, "seats": n, "available": a != "0"}
+        for t, c, n, a in zip(
+            request.POST.getlist("slot_time"),
+            request.POST.getlist("slot_tables"),
+            request.POST.getlist("slot_seats"),
+            request.POST.getlist("slot_available"),
+        )
+    ]
+
+
+def render_store_details(
+    request, restaurant, *, values=None, errors=None, extras=None, slot_rows=None
+):
+    return render(
+        request,
+        "dashboard/owner_store_details.html",
+        {
+            "restaurant": restaurant,
+            "values": _store_values(restaurant) if values is None else values,
+            "errors": {f: " ".join(msgs) for f, msgs in (errors or {}).items()},
+            "extras": _store_extras(restaurant) if extras is None else extras,
+            "max_extras": MAX_EXTRAS,
+            "gallery_slots": _gallery_slots(restaurant, errors),
+            "slot_rows": _slot_rows(restaurant) if slot_rows is None else slot_rows,
+            "slots_custom": bool(restaurant and restaurant.booking_slots.exists()),
+            "custom_dates": ",".join(_custom_slot_dates(restaurant)),
+            "slots_min_date": booking_services.booking_window()[0].isoformat(),
+            "slots_max_date": booking_services.booking_window()[1].isoformat(),
+            "max_slots": MAX_BOOKING_SLOTS,
+            "max_tables": MAX_TABLES_PER_SLOT,
+            "max_seats": MAX_SEATS_PER_TABLE,
+            "category_choices": Restaurant.Category.choices,
+            "price_choices": PRICE_CHOICES,
+            "service_mode_choices": Restaurant.ServiceMode.choices,
+        },
+    )
+
+
+def save_store_details(request, restaurant):
+    """บันทึกหน้า Store Details ตอนกด Save (ข้อมูลร้าน + รูปโปรไฟล์ใน request เดียว)
+
+    ลำดับ: ตรวจฟอร์มและไฟล์รูปให้ครบก่อน -> อัปโหลดรูปขึ้น Cloudinary (ถ้ามีไฟล์ใหม่)
+    -> update_restaurant ถ้าขั้นไหนไม่ผ่านจะไม่บันทึกอะไรเลย รูปเดิมและข้อมูลเดิมจึงไม่หาย
+    ตอบ JSON เมื่อเรียกจาก fetch (หน้าไม่ reload ไฟล์ที่เลือกไว้จึงอยู่ครบ)
+    ส่วนฟอร์มปกติ (ไม่มี JS) จะ redirect เมื่อสำเร็จ หรือ render หน้าเดิมพร้อมค่าที่กรอกเมื่อไม่ผ่าน
+    """
+    wants_json = _wants_json(request)
+    # มีเฉพาะ request จากหน้านี้ (ส่วน Extra details อยู่ในฟอร์ม) ถ้าไม่มีตัวนี้ extras ที่ไม่ได้ส่งมา
+    # จะถูกตีความว่า "ลบทั้งหมด" จึงต้องไม่แตะ extra_details
+    extras_present = "extras_present" in request.POST
+
+    if restaurant is None:
+        message = "บัญชีนี้ยังไม่มีร้าน กรุณาสร้างร้านจากแดชบอร์ดก่อน"
+        if wants_json:
+            return JsonResponse({"ok": False, "error": message, "errors": {}}, status=404)
+        messages.error(request, message)
+        return redirect("owner_store_details")
+
+    form = RestaurantForm(request.POST)
+    form_valid = form.is_valid()
+    errors = {field: list(msgs) for field, msgs in form.errors.items()}
+
+    image_file = request.FILES.get("image_file")
+    if image_file:
+        try:
+            services.validate_image_upload(image_file)
+        except services.RestaurantError as exc:
+            errors["image_file"] = [str(exc)]
+
+    # รูปในช่อง Pictures: gallery_file_1..N (ตรวจทุกไฟล์ก่อนอัปโหลดอะไรขึ้น Cloudinary)
+    gallery_files = {}
+    for slot in range(1, MAX_GALLERY_IMAGES + 1):
+        file = request.FILES.get(f"gallery_file_{slot}")
+        if not file:
+            continue
+        try:
+            services.validate_image_upload(file)
+        except services.RestaurantError as exc:
+            errors[f"gallery_file_{slot}"] = [str(exc)]
+        else:
+            gallery_files[slot] = file
+
+    # รอบเวลาจอง: ส่งมาเมื่อมี slots_present เท่านั้น (ฟอร์มเก่าที่ไม่มีส่วนนี้จะไม่แตะรอบเวลา)
+    slots_present = "slots_present" in request.POST
+    slot_rows = None
+    slots_day = None
+    if slots_present:
+        raw_day = request.POST.get("slots_date", "").strip()
+        if raw_day:
+            slots_day = parse_slots_day(raw_day)
+            if slots_day is None:
+                errors["booking_slots"] = ["วันที่เลือกอยู่นอกช่วงที่ลูกค้าจองได้"]
+        try:
+            slot_rows = services.parse_booking_slots(
+                request.POST.getlist("slot_time"),
+                request.POST.getlist("slot_tables"),
+                request.POST.getlist("slot_seats"),
+                request.POST.getlist("slot_available"),
+            )
+        except services.RestaurantError as exc:
+            errors["booking_slots"] = [str(exc)]
+
+    if not form_valid or errors:
+        message = "ยังไม่ได้บันทึก กรุณาตรวจสอบช่องที่มีข้อความแจ้งเตือน"
+        if wants_json:
+            return JsonResponse({"ok": False, "error": message, "errors": errors}, status=400)
+        messages.error(request, message)
+        values = {**_store_values(restaurant), **{
+            field: request.POST[field] for field in STORE_DETAIL_FIELDS if field in request.POST
+        }}
+        # ฟอร์มที่ไม่มีส่วน Extra details (ไม่มี extras_present) ให้วาดแถวเดิมจาก DB
+        extras = _posted_extras(request) if extras_present else None
+        return render_store_details(
+            request,
+            restaurant,
+            values=values,
+            errors=errors,
+            extras=extras,
+            slot_rows=_posted_slot_rows(request) if slots_present else None,
+        )
+
+    data = dict(form.cleaned_data)
+    # รูปเปลี่ยนได้ทางเดียวคืออัปโหลดไฟล์ใหม่ (ฟิลด์ image ของฟอร์มไม่ได้อยู่บนหน้านี้)
+    data.pop("image", None)
+
+    try:
+        # รูปใหม่ (ถ้ามี) อัปโหลดก่อนแล้วค่อยบันทึก DB; รูปเก่าถูกลบหลัง commit (ดู services)
+        # extra_details: บันทึกเฉพาะเมื่อ request มาจากหน้าที่มีส่วน Extra details (extras_present)
+        # no_show_grace_minutes: เว้นว่างหรือไม่ส่งมา = คงค่าเดิม (service ข้ามค่า None)
+        services.update_restaurant_with_image(
+            restaurant,
+            request.user,
+            data,
+            image_file,
+            extra_details=data["extras"] if extras_present else None,
+            gallery_files=gallery_files,
+            gallery_removals=_gallery_removals(request),
+        )
+        if slots_present and slots_day is not None:
+            services.replace_date_slots(restaurant, request.user, slots_day, slot_rows)
+        elif slots_present:
+            services.replace_booking_slots(restaurant, request.user, slot_rows)
+    except services.RestaurantError as exc:
+        if wants_json:
+            # ชี้ช่องรูปหลักเฉพาะเมื่ออัปโหลดแค่รูปเดียว (ถ้าอัปโหลดหลายรูปจะบอกไม่ได้ว่ารูปไหนพัง)
+            upload_errors = (
+                {"image_file": [str(exc)]} if image_file and not gallery_files else {}
+            )
+            return JsonResponse(
+                {"ok": False, "error": str(exc), "errors": upload_errors}, status=400
+            )
+        messages.error(request, str(exc))
+        return redirect("owner_store_details")
+
+    message = f"บันทึกร้าน {restaurant.name} แล้ว"
+    if wants_json:
+        return JsonResponse(
+            {
+                "ok": True,
+                "message": message,
+                "name": restaurant.name,
+                "image_url": restaurant.image,
+                "extras": _store_extras(restaurant),
+                "no_show_grace_minutes": restaurant.no_show_grace_minutes,
+                "booking_slots": (
+                    (day_slot_rows(restaurant, slots_day)[0] if slots_day else _slot_rows(restaurant))
+                    if slots_present
+                    else None
+                ),
+                "custom_dates": _custom_slot_dates(restaurant),
+                "gallery": [
+                    {"slot": g["slot"], "url": g["url"]} for g in _gallery_slots(restaurant)
+                ],
+            }
+        )
+    messages.success(request, message)
+    return redirect("owner_store_details")
