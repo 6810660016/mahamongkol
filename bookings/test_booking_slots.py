@@ -203,3 +203,28 @@ class DateScheduleTests(SlotBookingBase):
         self.assertTrue(services.uses_custom_slots(plain, self.day))
         self.assertFalse(services.uses_custom_slots(plain, self.day + timedelta(days=1)))
         services.create_booking(self.users[0], plain, self.day, "12:00", 2)
+
+
+class BookingPageNextDayTests(SlotBookingBase):
+    """Late in the day, tomorrow's morning time must still be bookable."""
+
+    def test_tomorrow_morning_is_open_when_today_has_passed(self):
+        BookingSlot.objects.create(
+            restaurant=self.store, time=time(11, 0), table_count=1, seats_per_table=4
+        )
+        evening = datetime.combine(
+            self.today, time(18, 18), tzinfo=timezone.get_current_timezone()
+        ).astimezone(dt_timezone.utc)
+        with patch("django.utils.timezone.now", return_value=evening):
+            today_states = {o["value"]: o["state"] for o in services.slot_options(self.store, self.today)}
+            next_states = {o["value"]: o["state"] for o in services.slot_options(self.store, self.day)}
+            booking = services.create_booking(self.users[0], self.store, self.day, "11:00", 2)
+        self.assertEqual(today_states["11:00"], "past")
+        self.assertEqual(next_states["11:00"], "open")
+        self.assertEqual(booking.time, time(11, 0))
+
+    def test_page_versions_its_assets_and_tells_js_which_day_it_drew(self):
+        self.client.force_login(self.users[0])
+        response = self.client.get(reverse("booking", args=[self.store.slug]))
+        self.assertContains(response, "booking.js?v=")
+        self.assertContains(response, f'data-shown-day="{self.today.isoformat()}"')

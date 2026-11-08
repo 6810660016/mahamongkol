@@ -58,6 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
     note.textContent = open.length ? '' : 'ไม่มีเวลาว่างในวันนี้ กรุณาเลือกวันอื่น';
   };
 
+  // ถ้าโหลดรอบของวันที่เลือกไม่ได้ ห้ามให้เวลาของ "วันอื่น" ที่เซิร์ฟเวอร์วาดไว้ (เช่นวันนี้ที่บางรอบผ่านไปแล้ว)
+  // ค้างเป็นกดไม่ได้ เปิดทุกรอบที่ไม่เต็มไว้ก่อน เซิร์ฟเวอร์จะตรวจซ้ำตอนกดยืนยันจอง
+  const unlockOtherDay = () => {
+    if (dateInput.value === form.dataset.shownDay) return;
+    form.querySelectorAll('select[name="time"] option, input[name="time-choice"]').forEach((el) => { el.disabled = false; });
+    form.querySelectorAll('.booking-slots label.is-unavailable').forEach((el) => el.classList.remove('is-unavailable'));
+  };
+
   let request = 0;
   const refresh = async () => {
     if (!form.dataset.slotsUrl || !dateInput.value || !window.fetch) return;
@@ -65,13 +73,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = new URLSearchParams({ date: dateInput.value, guests: guestsSelect ? guestsSelect.value : '' });
     try {
       const response = await fetch(`${form.dataset.slotsUrl}?${query}`, { credentials: 'same-origin' });
-      if (!response.ok || id !== request) return;
+      if (id !== request) return;
+      if (!response.ok) { unlockOtherDay(); return; }
       render((await response.json()).slots);
     } catch (error) {
-      /* keep the server-rendered times if the request fails */
+      unlockOtherDay();
     }
   };
-  [dateInput, guestsSelect].forEach((input) => input && input.addEventListener('change', refresh));
+  [dateInput, guestsSelect].forEach((input) => {
+    if (!input) return;
+    input.addEventListener('change', refresh);
+    input.addEventListener('input', refresh);
+  });
 
   const first = radios().find((radio) => !radio.disabled);
   if (first && timeSelect && !timeSelect.value) sync(first.value);

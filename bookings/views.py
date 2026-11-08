@@ -49,6 +49,7 @@ def booking_view(request, slug):
         {
             "restaurant": restaurant,
             "error": error,
+            "shown_day": shown_day,
             "slot_options": services.slot_options(restaurant, shown_day),
             "selected_time": request.POST.get("time", ""),
             "min_date": min_date,
