@@ -271,3 +271,82 @@ class BookingJsFallbackTests(SlotBookingBase):
         self.assertIn("const fallback", source)
         self.assertNotIn("unlockOtherDay", source)
         self.assertIn("shownSelect", source)
+
+
+class ManageBookingsCustomSlotsTests(SlotBookingBase):
+    """The owner's per-time booking page and popular-time chart follow the store's own slots."""
+
+    def setUp(self):
+        super().setUp()
+        self.owner = User.objects.create_user(
+            "slot-mgr", "slot-mgr@example.com", PASSWORD, role=User.Role.OWNER
+        )
+        self.store.owner = self.owner
+        self.store.save()
+        self.client.force_login(self.owner)
+
+    def manage(self, **params):
+        return self.client.get(reverse("manage_bookings", args=[self.store.slug]), params)
+
+    def test_own_slot_time_is_listed_and_selected(self):
+        booking = self.book(self.users[0], at="18:00")
+        response = self.manage(date=self.day.isoformat(), time="18:00")
+        self.assertEqual(response.context["slots"], ["18:00"])
+        self.assertEqual(response.context["slot"], "18:00")
+        self.assertEqual(response.context["booked_count"], 1)
+        self.assertContains(response, booking.user.username)
+
+    def test_default_times_are_not_shown_for_a_store_with_own_slots(self):
+        response = self.manage(date=self.day.isoformat(), time="11:30")
+        self.assertEqual(response.context["slots"], ["18:00"])
+        self.assertEqual(response.context["slot"], "18:00")
+
+    def test_a_removed_slot_with_bookings_stays_visible(self):
+        self.book(self.users[0], at="18:00")
+        self.slot.delete()
+        BookingSlot.objects.create(
+            restaurant=self.store, time=time(20, 0), table_count=1, seats_per_table=2
+        )
+        response = self.manage(date=self.day.isoformat())
+        self.assertEqual(response.context["slots"], ["18:00", "20:00"])
+
+    def test_date_schedule_times_are_used_for_that_date(self):
+        self.store.booking_slot_dates.create(
+            date=self.day, time=time(12, 0), table_count=1, seats_per_table=2
+        )
+        self.assertEqual(self.manage(date=self.day.isoformat()).context["slots"], ["12:00"])
+
+    def test_default_store_still_lists_the_default_times(self):
+        self.store.owner = None
+        self.store.save()
+        plain = Restaurant.objects.create(slug="mgr-default", name="Plain", owner=self.owner)
+        response = self.client.get(reverse("manage_bookings", args=[plain.slug]))
+        self.assertEqual(response.context["slots"], list(services.SLOTS))
+
+    def test_popular_time_chart_counts_own_slot_times(self):
+        from dashboard import stats
+
+        self.book(self.users[0], at="18:00")
+        self.book(self.users[1], at="18:00")
+        bars = {b["label"]: b["count"] for b in stats.owner_overview_stats(self.store, 7)["popular"]}
+        self.assertEqual(bars, {"18:00": 2})
+
+    def test_popular_time_chart_keeps_default_times_when_none_are_set(self):
+        from dashboard import stats
+
+        plain = Restaurant.objects.create(slug="stats-default", name="Plain")
+        labels = [b["label"] for b in stats.owner_overview_stats(plain, 7)["popular"]]
+        self.assertEqual(labels, list(services.SLOTS))
+
+    def test_popular_time_chart_is_capped_to_the_busiest(self):
+        from dashboard import stats
+
+        for hour in range(8, 22):
+            if hour == 18:
+                continue  # already configured in setUp
+            self.store.booking_slots.create(
+                time=time(hour, 0), table_count=1, seats_per_table=2
+            )
+        bars = stats.owner_overview_stats(self.store, 7)["popular"]
+        self.assertEqual(len(bars), stats.MAX_POPULAR_BARS)
+        self.assertEqual([b["label"] for b in bars], sorted(b["label"] for b in bars))
