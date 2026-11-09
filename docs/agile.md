@@ -1,6 +1,6 @@
 # Agile: Velocity และ Burndown
 
-ข้อมูล ณ วันที่ 8 พ.ย. 2026 จาก issue และ PR ของ repo นี้
+ข้อมูล ณ วันที่ 9 พ.ย. 2026 จาก issue และ PR ของ repo นี้
 และ [GitHub Projects board ของทีม](https://github.com/users/6810660016/projects/1)
 ดูแบบ interactive ได้ที่ [dashboard](https://claude.ai/artifact/Nw3kLKjPYEVj3Mqraet61n)
 
@@ -22,10 +22,10 @@
 |---|---:|---:|
 | Sprint 1 | 31 | 31 |
 | Sprint 2 | 27 | 27 |
-| Sprint 3 | 70 | 57 |
-| **รวม** | **128** | **115** |
+| Sprint 3 | 68 | 68 |
+| **รวม** | **126** | **126** |
 
-ค่าเฉลี่ย velocity ประมาณ 38 points ต่อ sprint
+ค่าเฉลี่ย velocity 42 points ต่อ sprint
 
 ## Burndown
 
@@ -39,14 +39,15 @@
 |---|---|
 | Sprint 1 | 21 ต.ค. 31 → 28 ต.ค. 26 → 29 ต.ค. 18 → 30 ต.ค. 6 → 1 พ.ย. 0 |
 | Sprint 2 | 1 พ.ย. 27 → 4 พ.ย. 10 → 5 พ.ย. 0 |
-| Sprint 3 | 5 พ.ย. 70 → 7 พ.ย. 51 → 8 พ.ย. 16 → สิ้นวันที่ 8 พ.ย. 13 |
+| Sprint 3 | 5 พ.ย. 68 → 7 พ.ย. 49 → 8 พ.ย. 14 → สิ้นวันที่ 8 พ.ย. 0 |
 
-งานที่ยังเหลือใน Sprint 3 (13 points) คือ
-#62 เตรียมเดโม (2), #63 Deploy (5), #64 เอกสาร (3) และ #105 ตั้งค่า production (3)
+- #63 Deploy และ #105 ตั้งค่า production ใช้วันที่ merge PR #120 คือ 8 พ.ย. ตามเวลา UTC (01:06 น. วันที่ 9 พ.ย. เวลาไทย)
+- #64 เอกสาร ใช้วันที่ merge PR #112 (C4 และ ERD)
 
 ## นับ points อย่างไร
 
 - Story points มาจากชื่อ issue บน board
+- การพรีเซนต์ (#62) ไม่นับเป็น story points
 - วันที่งานเสร็จ:
   - Sprint 1 ใช้วันที่ปิด issue
   - Sprint 2 และ 3 ใช้วันที่ merge PR ที่ทำงานนั้น
